@@ -7,10 +7,14 @@ name = "wakamaria"
 version = "0.1.0"
 description = "Football predictions and final results for Frappe"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["Pillow>=10"]
 
 [tool.setuptools.packages.find]
 include = ["wakamaria*"]
 
 [tool.setuptools.package-data]
 wakamaria = ["**/*.json", "**/*.html", "**/*.js", "**/*.css", "**/*.png", "*.txt"]
+
+[tool.bench.frappe-dependencies]
+frappe = ">=16.0.0-dev,<17.0.0"
+erpnext = ">=16.0.0-dev,<17.0.0"

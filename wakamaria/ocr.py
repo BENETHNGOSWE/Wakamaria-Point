@@ -2,6 +2,9 @@
 import os
 import shutil
 import subprocess
+import tempfile
+from PIL import UnidentifiedImageError
+from wakamaria.image_processing import prepare_for_ocr
 import frappe
 from frappe import _
 
@@ -20,9 +23,12 @@ def extract_screenshot(name):
     binary = shutil.which("tesseract")
     if not binary: frappe.throw(_("Tesseract OCR is not installed on the server."))
     try:
-        result = subprocess.run([binary, path, "stdout", "--psm", "6"], capture_output=True, text=True, timeout=45, check=True)
-    except (subprocess.SubprocessError, OSError):
-        frappe.throw(_("OCR failed or timed out. Try a clearer screenshot."))
+        with tempfile.TemporaryDirectory(prefix="wakamaria-ocr-") as temp_dir:
+            prepared = os.path.join(temp_dir, "prepared.png")
+            prepare_for_ocr(path, prepared)
+            result = subprocess.run([binary, prepared, "stdout", "--psm", "6"], capture_output=True, text=True, timeout=45, check=True)
+    except (subprocess.SubprocessError, OSError, UnidentifiedImageError, ValueError):
+        frappe.throw(_("OCR failed, timed out or the image was invalid. Try a clearer, smaller screenshot."))
     doc.extracted_text = result.stdout[:100000]
     doc.save()
     return doc.extracted_text

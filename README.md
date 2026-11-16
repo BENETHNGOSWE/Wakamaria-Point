@@ -17,7 +17,7 @@ Football prediction and final-results website for Frappe / ERPNext v16. The appr
 
 - Existing working Frappe v16 / ERPNext v16 bench with scheduler, workers, Redis and database. Back up your site before installing.
 - A football-data.org API key and a plan that covers the competitions/current season being used. Free coverage and limits can change; check provider terms, especially before commercial use.
-- Optional: `tesseract` binary on the Frappe worker/web host for screenshot OCR.
+- Optional: `tesseract` binary and Pillow Python package in the Frappe web environment for screenshot OCR. Images are preprocessed locally; OCR text is still imperfect and requires review.
 - The server must have network access to `https://api.football-data.org`.
 
 ## Install on an existing bench
