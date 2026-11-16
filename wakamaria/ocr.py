@@ -76,6 +76,31 @@ def prepare_review(name):
     return {'created':len(cards),'detected':total,'limit':MAX_CARDS}
 
 @frappe.whitelist(methods=['POST'])
+def refresh_suggestions(name):
+    """Re-parse saved OCR and fill blanks only, preserving all reviewed values."""
+    doc = frappe.get_doc('Wakamaria Screenshot', name)
+    doc.check_permission('write')
+    if not doc.review_rows:
+        frappe.throw(_('There are no review rows yet. Use Prepare match review first.'))
+    leagues = frappe.get_all('Wakamaria League', filters={'enabled':1}, fields=['name','league_name'])
+    changed = 0
+    for row in doc.review_rows:
+        if row.imported_match:
+            continue
+        text = row.card_ocr or ''
+        home, away = parse_teams(text)
+        prediction = parse_tip(row.tip_ocr or '') or parse_tip(text)
+        league_matches = [l.name for l in leagues if l.league_name.casefold() in text.casefold()]
+        for field, value in (('home_team', home), ('away_team', away), ('prediction', prediction),
+                             ('league', league_matches[0] if len(league_matches)==1 else None)):
+            if not row.get(field) and value:
+                row.set(field, value)
+                changed += 1
+    if changed:
+        doc.save()
+    return {'fields_filled':changed}
+
+@frappe.whitelist(methods=['POST'])
 def create_drafts(name):
     if not frappe.has_permission('Wakamaria Match', 'create'):
         frappe.throw(_('You do not have permission to create matches.'), frappe.PermissionError)

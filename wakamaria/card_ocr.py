@@ -83,11 +83,16 @@ def extract_cards(path, binary, tmpdir, tessdata_dir=None):
         return result, len(boxes)
 
 def parse_tip(text):
+    # OCR sometimes renders 2.5 as 2.S or omits the space after Over.
+    # These are suggestions only; staff must check the screenshot before import.
+    goal = re.search(r"\btip\s*[:;]\s*(over|under)\s*2\s*[.,]\s*([5s])(?=\s|$|[^\w.])", text, re.I)
+    if goal:
+        return goal.group(1).capitalize() + " 2.5"
     # Never guess ambiguous OCR such as "Overs" or a bare number.
-    match = re.search(r'\btip\s*[:;]\s*(over\s*2[.,]5|under\s*2[.,]5|btts\s*(?:yes|no)|1x|x2|12|1|x|2)(?=\s|$|[^\w.])', text, re.I)
+    match = re.search(r"\btip\s*[:;]\s*(btts\s*(?:yes|no)|1x|x2|12|1|x|2)(?=\s|$|[^\w.])", text, re.I)
     if not match:
         return ''
-    value = re.sub(r'\s+', ' ', match.group(1)).replace(',', '.').lower()
+    value = re.sub(r'\s+', ' ', match.group(1)).lower()
     return {x.lower():x for x in TIPS}.get(value, '')
 
 def parse_teams(text):
@@ -97,6 +102,10 @@ def parse_teams(text):
         match = re.match(r'^\s*(.+?)\s+\d+\s*[-:]\s*\d+\s+(.+?)\s*$', line)
         if not match:
             match = re.match(r'^\s*(.+?)\s+vs\.?\s+(.+?)\s*$', line, re.I)
+        if not match:
+            # Some OCR collapses the score 2–3 into 23. Treat names as
+            # approximate fragments, never as verified identities or scores.
+            match = re.match(r'^\s*(.+?)\s+\d{2}\s+(.+?)\s*$', line)
         if match:
             home,away = [re.sub(r'^[^A-Za-z]+|[^A-Za-z]+$', '', s).strip() for s in match.groups()]
             if len(home)>=2 and len(away)>=2 and len(home)<=80 and len(away)<=80:

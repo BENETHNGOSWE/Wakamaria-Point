@@ -8,6 +8,14 @@ class CardOCRTest(unittest.TestCase):
             self.assertEqual(parse_tip(f'Tip: {value} Odds: 1.29'), value)
         for text in ('Tip: Overs', 'Tip: W', 'Odds: 1.29', 'Tip: 12x'):
             self.assertEqual(parse_tip(text), '')
+    def test_common_ocr_tip_error(self):
+        self.assertEqual(parse_tip('Tip: Over2.S 0dds: 1.66'), 'Over 2.5')
+        self.assertEqual(parse_tip('Tip: Under 2,5 Odds: 1.66'), 'Under 2.5')
+        self.assertEqual(parse_tip('Tip: Over2.8 Odds: 1.66'), '')
+
+    def test_fused_score_suggests_unverified_fragments(self):
+        self.assertEqual(parse_teams('spainiEm 23 =#=England'), ('spainiEm', 'England'))
+
     def test_suggests_only_score_separated_team_lines(self):
         self.assertEqual(parse_teams('Croatia 2-1 Czech Republic\nTip: 1'), ('Croatia','Czech Republic'))
         self.assertEqual(parse_teams('no match detected'), ('',''))
