@@ -1,0 +1,61 @@
+{
+  "doctype": "DocType",
+  "name": "Wakamaria League",
+  "module": "Wakamaria",
+  "engine": "InnoDB",
+  "editable_grid": 1,
+  "field_order": [
+    "league_name",
+    "country",
+    "provider_code",
+    "league_image",
+    "enabled"
+  ],
+  "fields": [
+    {
+      "fieldname": "league_name",
+      "label": "League Name",
+      "fieldtype": "Data",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "country",
+      "label": "Country / Region",
+      "fieldtype": "Data"
+    },
+    {
+      "fieldname": "provider_code",
+      "label": "football-data.org Competition Code",
+      "fieldtype": "Data",
+      "description": "Example: PL, PD, CL"
+    },
+    {
+      "fieldname": "league_image",
+      "label": "League Image",
+      "fieldtype": "Attach Image"
+    },
+    {
+      "fieldname": "enabled",
+      "label": "Enabled",
+      "fieldtype": "Check",
+      "default": "1"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1,
+      "print": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "autoname": "field:league_name",
+  "title_field": "league_name"
+}

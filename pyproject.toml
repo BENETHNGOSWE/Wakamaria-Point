@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wakamaria"
+version = "0.1.0"
+description = "Football predictions and final results for Frappe"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["wakamaria*"]
+
+[tool.setuptools.package-data]
+wakamaria = ["**/*.json", "**/*.html", "**/*.js", "**/*.css", "**/*.png", "*.txt"]

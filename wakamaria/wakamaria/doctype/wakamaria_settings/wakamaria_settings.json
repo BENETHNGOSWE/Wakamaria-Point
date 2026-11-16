@@ -1,0 +1,61 @@
+{
+  "doctype": "DocType",
+  "name": "Wakamaria Settings",
+  "module": "Wakamaria",
+  "engine": "InnoDB",
+  "editable_grid": 1,
+  "field_order": [
+    "enabled",
+    "api_key",
+    "history_enabled",
+    "last_sync",
+    "last_error"
+  ],
+  "fields": [
+    {
+      "fieldname": "enabled",
+      "label": "Enable automatic result checking",
+      "fieldtype": "Check",
+      "default": "0"
+    },
+    {
+      "fieldname": "api_key",
+      "label": "football-data.org API Key",
+      "fieldtype": "Password",
+      "description": "Stored using Frappe encrypted password storage. Never expose in website code."
+    },
+    {
+      "fieldname": "history_enabled",
+      "label": "Fetch recent team history",
+      "fieldtype": "Check",
+      "default": "1"
+    },
+    {
+      "fieldname": "last_sync",
+      "label": "Last Sync",
+      "fieldtype": "Datetime",
+      "read_only": 1
+    },
+    {
+      "fieldname": "last_error",
+      "label": "Last Sync Error",
+      "fieldtype": "Small Text",
+      "read_only": 1
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1,
+      "print": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "issingle": 1
+}

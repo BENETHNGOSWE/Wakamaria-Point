@@ -1,0 +1,62 @@
+{
+  "doctype": "DocType",
+  "name": "Wakamaria Screenshot",
+  "module": "Wakamaria",
+  "engine": "InnoDB",
+  "editable_grid": 1,
+  "field_order": [
+    "title",
+    "match_date",
+    "image",
+    "extracted_text",
+    "notes"
+  ],
+  "fields": [
+    {
+      "fieldname": "title",
+      "label": "Title",
+      "fieldtype": "Data",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "match_date",
+      "label": "Match Date",
+      "fieldtype": "Date"
+    },
+    {
+      "fieldname": "image",
+      "label": "Screenshot",
+      "fieldtype": "Attach Image",
+      "reqd": 1,
+      "description": "Upload as a private file. You must have permission to use and republish the source material."
+    },
+    {
+      "fieldname": "extracted_text",
+      "label": "OCR Text (review and use to create matches)",
+      "fieldtype": "Long Text",
+      "description": "OCR is a transcription aid. It does not create or publish predictions."
+    },
+    {
+      "fieldname": "notes",
+      "label": "Review Notes",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1,
+      "print": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "autoname": "hash",
+  "title_field": "title"
+}

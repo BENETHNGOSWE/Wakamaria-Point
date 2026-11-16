@@ -1,0 +1,163 @@
+{
+  "doctype": "DocType",
+  "name": "Wakamaria Match",
+  "module": "Wakamaria",
+  "engine": "InnoDB",
+  "editable_grid": 1,
+  "field_order": [
+    "league",
+    "home_team",
+    "away_team",
+    "kickoff",
+    "prediction",
+    "published",
+    "provider_section",
+    "provider_match_id",
+    "provider_home_team_id",
+    "provider_away_team_id",
+    "provider_status",
+    "result_section",
+    "result_confirmed",
+    "home_score",
+    "away_score",
+    "outcome",
+    "last_checked",
+    "notes"
+  ],
+  "fields": [
+    {
+      "fieldname": "league",
+      "label": "League",
+      "fieldtype": "Link",
+      "options": "Wakamaria League",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "home_team",
+      "label": "Home Team",
+      "fieldtype": "Data",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "away_team",
+      "label": "Away Team",
+      "fieldtype": "Data",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "kickoff",
+      "label": "Kickoff (site timezone)",
+      "fieldtype": "Datetime",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "prediction",
+      "label": "Prediction",
+      "fieldtype": "Select",
+      "options": "\n1\nX\n2\n1X\nX2\n12\nOver 2.5\nUnder 2.5\nBTTS Yes\nBTTS No",
+      "reqd": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "published",
+      "label": "Published",
+      "fieldtype": "Check",
+      "default": "0",
+      "description": "Only published predictions are visible on the public website."
+    },
+    {
+      "fieldname": "provider_section",
+      "label": "Provider Match",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "provider_match_id",
+      "label": "football-data.org Match ID",
+      "fieldtype": "Data",
+      "unique": 1,
+      "description": "Use Find fixture and confirm the correct fixture. Required for automatic result checking."
+    },
+    {
+      "fieldname": "provider_home_team_id",
+      "label": "Provider Home Team ID",
+      "fieldtype": "Data",
+      "read_only": 1
+    },
+    {
+      "fieldname": "provider_away_team_id",
+      "label": "Provider Away Team ID",
+      "fieldtype": "Data",
+      "read_only": 1
+    },
+    {
+      "fieldname": "provider_status",
+      "label": "Provider Status",
+      "fieldtype": "Data",
+      "read_only": 1
+    },
+    {
+      "fieldname": "result_section",
+      "label": "Final Result (90 minutes)",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "result_confirmed",
+      "label": "Result Confirmed",
+      "fieldtype": "Check",
+      "default": "0",
+      "description": "Set manually only for a verified full-time result, or let automatic sync set it."
+    },
+    {
+      "fieldname": "home_score",
+      "label": "Home Score",
+      "fieldtype": "Int",
+      "default": "0"
+    },
+    {
+      "fieldname": "away_score",
+      "label": "Away Score",
+      "fieldtype": "Int",
+      "default": "0"
+    },
+    {
+      "fieldname": "outcome",
+      "label": "Outcome",
+      "fieldtype": "Select",
+      "options": "Pending\nWin\nLose",
+      "read_only": 1,
+      "default": "Pending",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "last_checked",
+      "label": "Last Checked",
+      "fieldtype": "Datetime",
+      "read_only": 1
+    },
+    {
+      "fieldname": "notes",
+      "label": "Private Admin Notes",
+      "fieldtype": "Small Text"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1,
+      "report": 1,
+      "export": 1,
+      "print": 1
+    }
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "autoname": "hash",
+  "title_field": "home_team"
+}
