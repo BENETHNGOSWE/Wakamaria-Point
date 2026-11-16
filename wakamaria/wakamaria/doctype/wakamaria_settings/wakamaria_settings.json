@@ -9,7 +9,8 @@
     "api_key",
     "history_enabled",
     "last_sync",
-    "last_error"
+    "last_error",
+    "ocr_tessdata_dir"
   ],
   "fields": [
     {
@@ -41,6 +42,12 @@
       "label": "Last Sync Error",
       "fieldtype": "Small Text",
       "read_only": 1
+    },
+    {
+      "fieldname": "ocr_tessdata_dir",
+      "label": "Optional OCR Model Directory",
+      "fieldtype": "Data",
+      "description": "Absolute path to a folder containing eng.traineddata. Leave blank to use the server default."
     }
   ],
   "permissions": [

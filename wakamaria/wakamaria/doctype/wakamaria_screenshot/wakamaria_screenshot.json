@@ -9,6 +9,7 @@
     "match_date",
     "image",
     "extracted_text",
+    "review_rows",
     "notes"
   ],
   "fields": [
@@ -36,6 +37,13 @@
       "label": "OCR Text (review and use to create matches)",
       "fieldtype": "Long Text",
       "description": "OCR is a transcription aid. It does not create or publish predictions."
+    },
+    {
+      "fieldname": "review_rows",
+      "label": "Review Match Cards",
+      "fieldtype": "Table",
+      "options": "Wakamaria Screenshot Row",
+      "description": "Suggestions only. Verify every field, select rows, then create unpublished drafts."
     },
     {
       "fieldname": "notes",

@@ -1,0 +1,78 @@
+{
+  "doctype": "DocType",
+  "name": "Wakamaria Screenshot Row",
+  "module": "Wakamaria",
+  "engine": "InnoDB",
+  "istable": 1,
+  "editable_grid": 1,
+  "field_order": [
+    "select_for_import",
+    "league",
+    "home_team",
+    "away_team",
+    "kickoff",
+    "prediction",
+    "card_ocr",
+    "tip_ocr",
+    "imported_match"
+  ],
+  "fields": [
+    {
+      "fieldname": "select_for_import",
+      "label": "Import",
+      "fieldtype": "Check",
+      "default": "0",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "league",
+      "label": "League",
+      "fieldtype": "Link",
+      "options": "Wakamaria League",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "home_team",
+      "label": "Home Team",
+      "fieldtype": "Data",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "away_team",
+      "label": "Away Team",
+      "fieldtype": "Data",
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "kickoff",
+      "label": "Kickoff (site timezone)",
+      "fieldtype": "Datetime"
+    },
+    {
+      "fieldname": "prediction",
+      "label": "Prediction",
+      "fieldtype": "Select",
+      "options": "\n1\nX\n2\n1X\nX2\n12\nOver 2.5\nUnder 2.5\nBTTS Yes\nBTTS No"
+    },
+    {
+      "fieldname": "card_ocr",
+      "label": "OCR Text - Verify All Fields",
+      "fieldtype": "Small Text",
+      "read_only": 1
+    },
+    {
+      "fieldname": "tip_ocr",
+      "label": "Tip Crop OCR",
+      "fieldtype": "Small Text",
+      "read_only": 1
+    },
+    {
+      "fieldname": "imported_match",
+      "label": "Imported Draft",
+      "fieldtype": "Link",
+      "options": "Wakamaria Match",
+      "read_only": 1
+    }
+  ],
+  "permissions": []
+}
