@@ -16,6 +16,13 @@ class CardOCRTest(unittest.TestCase):
     def test_fused_score_suggests_unverified_fragments(self):
         self.assertEqual(parse_teams('spainiEm 23 =#=England'), ('spainiEm', 'England'))
 
+    def test_ocr_status_and_odds_are_not_teams(self):
+        self.assertEqual(parse_teams('FT To 12 0dds: 1.29'), ('', ''))
+        self.assertEqual(parse_teams('FT To 12 Odds: 1.29'), ('', ''))
+
+    def test_either_team_description_is_a_suggestion(self):
+        self.assertEqual(parse_teams('FT To 12 0dds: 1.29\n© either Belgium or Italy to win at Fell time'), ('Belgium', 'Italy'))
+
     def test_suggests_only_score_separated_team_lines(self):
         self.assertEqual(parse_teams('Croatia 2-1 Czech Republic\nTip: 1'), ('Croatia','Czech Republic'))
         self.assertEqual(parse_teams('no match detected'), ('',''))

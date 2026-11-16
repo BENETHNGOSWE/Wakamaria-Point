@@ -96,18 +96,37 @@ def parse_tip(text):
     return {x.lower():x for x in TIPS}.get(value, '')
 
 def parse_teams(text):
-    # Heuristic only; badges/flags can look like letters. Always review.
+    """Produce unverified fragments; never treat score or tip lines as teams."""
+    # In some screenshots the descriptive line identifies both teams more
+    # clearly than the line containing flags: "Either Belgium or Italy to win".
+    # Names remain suggestions; their side/order must be reviewed by staff.
     for line in text.splitlines():
-        if re.search(r'half.?time|tip\s*:|odds|view details', line, re.I): continue
-        match = re.match(r'^\s*(.+?)\s+\d+\s*[-:]\s*\d+\s+(.+?)\s*$', line)
+        desc = re.search(r"\b(?:either|e1ther)\s+(.+?)\s+or\s+(.+?)\s+to\s+win\b", line, re.I)
+        if desc:
+            home, away = [re.sub(r"^[^A-Za-z]+|[^A-Za-z]+$", "", part).strip() for part in desc.groups()]
+            if _plausible_teams(home, away):
+                return home, away
+    for line in text.splitlines():
+        # Common OCR 0/O confusion can turn "Odds" into "0dds". These lines
+        # and FT/HT status lines must never be interpreted as match names.
+        if re.search(r"^\s*(?:FT|HT)\b|half.?time|tip\s*:|[o0]dds|view details", line, re.I):
+            continue
+        match = re.match(r"^\s*(.+?)\s+\d+\s*[-:]\s*\d+\s+(.+?)\s*$", line)
         if not match:
-            match = re.match(r'^\s*(.+?)\s+vs\.?\s+(.+?)\s*$', line, re.I)
+            match = re.match(r"^\s*(.+?)\s+vs\.?\s+(.+?)\s*$", line, re.I)
         if not match:
-            # Some OCR collapses the score 2–3 into 23. Treat names as
-            # approximate fragments, never as verified identities or scores.
-            match = re.match(r'^\s*(.+?)\s+\d{2}\s+(.+?)\s*$', line)
+            # Sometimes the score 2–3 is read as 23. Treat both sides as
+            # approximate fragments, never verified identities or scores.
+            match = re.match(r"^\s*(.+?)\s+\d{2}\s+(.+?)\s*$", line)
         if match:
-            home,away = [re.sub(r'^[^A-Za-z]+|[^A-Za-z]+$', '', s).strip() for s in match.groups()]
-            if len(home)>=2 and len(away)>=2 and len(home)<=80 and len(away)<=80:
+            home, away = [re.sub(r"^[^A-Za-z]+|[^A-Za-z]+$", "", part).strip() for part in match.groups()]
+            if _plausible_teams(home, away):
                 return home, away
     return '', ''
+
+
+def _plausible_teams(home, away):
+    # Avoid short OCR rubbish such as "ds" and status prefixes such as "FT To".
+    if any(re.match(r"^(?:ft|ht)\b", part, re.I) for part in (home, away)):
+        return False
+    return all(3 <= len(re.sub(r"[^A-Za-z]", "", part)) and len(part) <= 80 for part in (home, away))
