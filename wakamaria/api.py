@@ -8,7 +8,7 @@ from frappe.utils import get_datetime, get_system_timezone
 def list_matches():
     leagues = frappe.get_all("Wakamaria League", filters={"enabled": 1}, fields=["name", "league_name", "country", "league_image"], order_by="league_name asc")
     enabled = {x.name for x in leagues}
-    rows = frappe.get_all("Wakamaria Match", filters={"published": 1, "league": ["in", list(enabled) or [""]]}, fields=["name", "league", "home_team", "away_team", "kickoff", "prediction", "result_confirmed", "home_score", "away_score", "outcome", "provider_status"], order_by="kickoff asc", limit_page_length=500)
+    rows = frappe.get_all("Wakamaria Match", filters={"published": 1, "league": ["in", list(enabled) or [""]]}, fields=["name", "league", "home_team", "away_team", "kickoff", "prediction", "result_confirmed", "home_score", "away_score", "outcome", "provider_status"], order_by="kickoff desc", limit_page_length=500)
     return {"leagues": leagues, "matches": rows, "timezone":get_system_timezone()}
 
 @frappe.whitelist(allow_guest=True)

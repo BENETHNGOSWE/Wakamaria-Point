@@ -11,4 +11,6 @@ class WakamariaMatch(Document):
             frappe.throw(_("Scores cannot be negative."))
         if self.provider_match_id and not str(self.provider_match_id).isdigit():
             frappe.throw(_("Provider match ID must be numeric."))
+        if self.provider_match_id and frappe.db.exists("Wakamaria Match", {"provider_match_id": self.provider_match_id, "name": ["!=", self.name or ""]}):
+            frappe.throw(_("This provider fixture is already linked to another Wakamaria Match."))
         self.outcome = evaluate(self.prediction, self.home_score, self.away_score) if self.result_confirmed else "Pending"
