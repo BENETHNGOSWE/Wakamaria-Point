@@ -152,11 +152,13 @@
       "delete": 1,
       "report": 1,
       "export": 1,
-      "print": 1
+      "print": 1,
+      "import": 1
     }
   ],
   "sort_field": "modified",
   "sort_order": "DESC",
   "autoname": "hash",
-  "title_field": "home_team"
+  "title_field": "home_team",
+  "allow_import": 1
 }
