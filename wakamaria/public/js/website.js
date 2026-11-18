@@ -1,7 +1,7 @@
 (() => {
   const defaultImage = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path fill="#cbe2cd" d="M32 3 55 11v18c0 15-9 25-23 32C18 54 9 44 9 29V11z"/><path fill="#216e4f" d="M32 8 50 14v15c0 11-6 19-18 26-12-7-18-15-18-26V14z"/><circle cx="32" cy="29" r="14" fill="#f7fbf5"/><path d="m32 19 5 4-2 6h-6l-2-6zm-11 6 5-2m-5 2 1 7 5 3 2-6m14-4-5-2m5 2-1 7-5 3-2-6m-8 6 2 5h6l2-5" fill="none" stroke="#216e4f" stroke-width="2" stroke-linejoin="round"/></svg>`);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let leagues=[], matches=[], selectedLeague='All leagues', selectedStatus='all', search='', siteTimezone='';
+  let leagues=[], matches=[], selectedLeague='All leagues', selectedStatus='all', selectedDate='All dates', search='', siteTimezone='';
   const tipText={'1':'Home win','X':'Draw','2':'Away win','1X':'Home win or draw','X2':'Draw or away win','12':'Either team wins','Over 2.5':'3 or more goals','Under 2.5':'Fewer than 3 goals','Under 3.5':'Fewer than 4 goals','BTTS Yes':'Both teams score','BTTS No':'At least one team does not score'};
   const fmtOdds = v => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n.toFixed(2) : '—'; };
   const dateParts = input => { const [day='',time=''] = String(input||'').split(/[ T]/); return {day,time:time.slice(0,5)}; };
@@ -24,11 +24,37 @@
     document.getElementById('mobile-leagues').innerHTML=`<button class="side-btn ${selectedLeague==='All leagues'?'active':''}" data-league="All leagues">All leagues</button>`+html;
     document.querySelector('.sidebar [data-league="All leagues"]').classList.toggle('active',selectedLeague==='All leagues');document.getElementById('all-count').textContent=statusMatches.length;
   }
+  const dayKey = value => String(value || '').slice(0, 10);
+  function dateLabel(key) {
+    const today = dayKey(siteNow());
+    const diff = Math.round((new Date(key+'T00:00:00') - new Date(today+'T00:00:00')) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    if (diff === -1) return 'Yesterday';
+    try {
+      return new Date(key+'T00:00:00').toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
+    } catch (_) { return key; }
+  }
+  function dateStrip(statusMatches) {
+    const counts = {};
+    statusMatches.forEach(m => { const k = dayKey(m.kickoff); if (k) counts[k] = (counts[k] || 0) + 1; });
+    const keys = Object.keys(counts).sort();
+    // A date can disappear when the list refreshes; never leave the user stranded.
+    if (selectedDate !== 'All dates' && !counts[selectedDate]) selectedDate = 'All dates';
+    const strip = document.getElementById('date-strip');
+    if (!strip) return;
+    if (keys.length < 2) { strip.innerHTML = ''; strip.style.display = 'none'; return; }
+    strip.style.display = 'flex';
+    const chip = (key, label, n) => `<button class="date-chip${selectedDate===key?' active':''}" data-date="${esc(key)}">${esc(label)}<span class="n">${n}</span></button>`;
+    strip.innerHTML = chip('All dates', 'All dates', statusMatches.length)
+      + keys.map(k => chip(k, dateLabel(k), counts[k])).join('');
+  }
   function render(){
     let q=search.trim().toLowerCase();
     const now=siteNow(), statusMatches=matches.filter(m=>inSelectedStatus(m,now));
     leagueButtons(statusMatches);
-    const filtered=statusMatches.filter(m=>(selectedLeague==='All leagues'||m.league===selectedLeague)&&(!q||`${m.home_team} ${m.away_team} ${m.league} ${m.prediction||''}`.toLowerCase().includes(q)));
+    dateStrip(statusMatches);
+    const filtered=statusMatches.filter(m=>(selectedDate==='All dates'||dayKey(m.kickoff)===selectedDate)&&(selectedLeague==='All leagues'||m.league===selectedLeague)&&(!q||`${m.home_team} ${m.away_team} ${m.league} ${m.prediction||''}`.toLowerCase().includes(q)));
     const html=leagues.map(l=>{const items=filtered.filter(m=>m.league===l.name);if(!items.length)return '';return `<section class="league-card"><div class="league-head"><div class="league-icon">${image(l)}</div><div><div class="league-title">${esc(l.league_name)}</div><div class="league-sub">${esc(l.country||'Football')} · Football</div></div><span class="league-num">${items.length} ${items.length===1?'match':'matches'}</span></div><div class="column-head"><span>Date & time</span><span>Match</span><span>Prediction</span><span>Odds</span><span>Score</span><span>Result</span></div>${items.map(m=>{let d=dateParts(m.kickoff);return `<div class="match-row"><div class="date"><strong>${esc(d.day)}</strong><br>${esc(d.time)}</div><div class="teams"><div class="team-line"><span class="team-badge">${esc((m.home_team || '?')[0])}</span>${esc(m.home_team)}</div><div class="team-line"><span class="team-badge">${esc((m.away_team || '?')[0])}</span>${esc(m.away_team)}</div></div><div class="prediction">${esc(m.prediction)}<small>${esc(tipText[m.prediction]||'')}</small></div><div class="odds"><b>${m.odds ? esc(fmtOdds(m.odds)) : '—'}</b><small>${m.odds ? (m.odds_source === 'Bookmaker' ? 'book' : 'est') : ''}</small></div><div class="score">${m.result_confirmed?`${esc(m.home_score)} : ${esc(m.away_score)}`:'— : —'}<small>${m.result_confirmed?'FULL TIME':esc(m.provider_status||'PENDING')}</small></div><div class="result">${badge(m)}<button class="details" data-id="${esc(m.name)}" aria-label="View ${esc(m.home_team)} versus ${esc(m.away_team)} details">›</button></div></div>`}).join('')}</section>`}).join('');
     document.getElementById('match-list').innerHTML=html||`<div class="empty">${selectedStatus==='finished'?'No confirmed results to show.':'No matching pending predictions to show.'}</div>`;
   }
@@ -51,7 +77,7 @@
     render();
   }
   document.addEventListener('error',e=>{if(e.target.matches('[data-league-image]')&&e.target.src!==defaultImage)e.target.src=defaultImage},true);
-  document.addEventListener('click',e=>{const league=e.target.closest('[data-league]');if(league){selectedLeague=league.dataset.league;render()}const tab=e.target.closest('[data-status]');if(tab)setStatus(tab.dataset.status);const detail=e.target.closest('[data-id]');if(detail)details(detail.dataset.id);if(e.target.id==='close'||e.target.id==='modal')document.getElementById('modal').classList.remove('open')});
+  document.addEventListener('click',e=>{const dateChip=e.target.closest('[data-date]');if(dateChip){selectedDate=dateChip.dataset.date;render()}const league=e.target.closest('[data-league]');if(league){selectedLeague=league.dataset.league;render()}const tab=e.target.closest('[data-status]');if(tab)setStatus(tab.dataset.status);const detail=e.target.closest('[data-id]');if(detail)details(detail.dataset.id);if(e.target.id==='close'||e.target.id==='modal')document.getElementById('modal').classList.remove('open')});
   document.getElementById('search').addEventListener('input',e=>{search=e.target.value;render()});document.getElementById('predictions-link').addEventListener('click',()=>setStatus('all'));document.getElementById('results-link').addEventListener('click',()=>setStatus('finished'));document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('modal').classList.remove('open')});
   let loaded=false, loading=false;
   async function refreshMatches() {
