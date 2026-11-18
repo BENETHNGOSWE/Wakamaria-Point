@@ -25,6 +25,7 @@ from frappe.utils import (add_days, add_to_date, convert_utc_to_system_timezone,
 
 from wakamaria import model, odds
 from wakamaria.agentconfig import resolve as resolve_config
+from wakamaria.diagnostics import describe_error as _describe_error
 from wakamaria.predictor import choose
 from wakamaria.provider import api_get
 from wakamaria.tips import family
@@ -79,6 +80,8 @@ def _run(settings):
         fields=["name", "league_name", "provider_code"],
     )
 
+    failed = []
+
     for league in leagues:
         if created >= max_per_run:
             break
@@ -86,8 +89,11 @@ def _run(settings):
             break
         try:
             fixtures = _fixtures(league.provider_code, horizon)
-        except Exception:
-            # One unreadable competition must not cost us the rest of the card.
+        except Exception as error:
+            # One unreadable competition must not cost us the rest of the card,
+            # but it must not vanish either — otherwise the summary reads
+            # "Created 0, skipped 0" and the operator has nothing to act on.
+            failed.append(f"{league.provider_code or league.name}: {_describe_error(error)}")
             continue
 
         for fixture in fixtures:
@@ -115,10 +121,13 @@ def _run(settings):
                 skipped += 1
 
     frappe.db.commit()
-    return (f"Created {created} prediction(s), skipped {skipped}. "
-            f"horizon={horizon}h band={min_confidence:.2f}-{max_confidence:.2f} "
-            f"cap={max_per_run}/run,{config['max_per_day']}/day "
-            f"margin={margin:.2f}")
+    summary = (f"Created {created} prediction(s), skipped {skipped}. "
+               f"horizon={horizon}h band={min_confidence:.2f}-{max_confidence:.2f} "
+               f"cap={max_per_run}/run,{config['max_per_day']}/day "
+               f"margin={margin:.2f}")
+    if failed:
+        summary += " | league errors: " + "; ".join(failed)[:300]
+    return summary
 
 
 def _fixtures(provider_code, horizon):
@@ -284,6 +293,65 @@ def _created_today():
         "predicted_by": "Agent",
         "creation": [">=", start],
     })
+
+
+def diagnose():
+    """Explain why the agent is, or is not, creating predictions.
+
+        bench --site <site> execute wakamaria.agent.diagnose
+    """
+    import time
+
+    settings = frappe.get_single("Wakamaria Settings")
+    config = resolve_config(settings)
+    key = settings.get_password("api_key", raise_exception=False)
+
+    lines = [
+        f"result sync enabled : {bool(settings.get('enabled'))}",
+        f"football-data key   : {'set' if key else 'MISSING'}",
+        f"agent enabled       : {bool(settings.get('agent_enabled'))}",
+        f"agent paused        : {bool(settings.get('agent_paused'))}",
+        (f"resolved config     : horizon={config['horizon_hours']}h "
+         f"band={config['min_confidence']}-{config['max_confidence']} "
+         f"cap={config['max_per_run']}/run"),
+        "",
+    ]
+
+    leagues = frappe.get_all(
+        "Wakamaria League", filters={"enabled": 1},
+        fields=["name", "league_name", "provider_code"], order_by="league_name asc",
+    )
+    lines.append(f"enabled leagues     : {len(leagues)}")
+    if not leagues:
+        lines.append("  -> none enabled, so nothing can ever be predicted.")
+        return "\n".join(lines)
+
+    usable = [le for le in leagues if le.provider_code]
+    lines.append(f"with provider_code  : {len(usable)}")
+    for league in leagues:
+        if not league.provider_code:
+            lines.append(f"  - {league.league_name}: no provider_code, skipped")
+    if not usable:
+        lines.append("  -> not one league has a code. Set it on the League form.")
+        return "\n".join(lines)
+
+    lines.append("")
+    for index, league in enumerate(usable[:5]):
+        if index:
+            time.sleep(PROVIDER_PAUSE)
+        try:
+            fixtures = _fixtures(league.provider_code, config["horizon_hours"])
+        except Exception as error:
+            lines.append(f"  - {league.league_name} [{league.provider_code}]: "
+                         f"{_describe_error(error)}")
+            continue
+        lines.append(f"  - {league.league_name} [{league.provider_code}]: "
+                     f"{len(fixtures)} fixture(s) in next {config['horizon_hours']}h")
+
+    lines += ["",
+              "Fixtures > 0 but nothing published means the model had no history to",
+              "price from yet. Run wakamaria.sync.sync_all first to fill the cache."]
+    return "\n".join(lines)
 
 
 def _tripped(settings):
