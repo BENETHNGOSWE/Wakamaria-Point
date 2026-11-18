@@ -24,6 +24,7 @@ from frappe.utils import (add_days, add_to_date, convert_utc_to_system_timezone,
                           get_datetime, now_datetime)
 
 from wakamaria import model, odds
+from wakamaria.agentconfig import resolve as resolve_config
 from wakamaria.predictor import choose
 from wakamaria.provider import api_get
 from wakamaria.tips import family
@@ -59,12 +60,13 @@ def run_agent():
 
 
 def _run(settings):
-    horizon = int(settings.get("agent_horizon_hours") or 36)
-    max_per_run = int(settings.get("agent_max_per_run") or 12)
-    min_confidence = float(settings.get("agent_min_confidence") or 0.45)
-    max_confidence = float(settings.get("agent_max_confidence") or 0.66)
-    family_cap = int(settings.get("agent_family_cap") or 2)
-    margin = float(settings.get("agent_margin") or model.DEFAULT_MARGIN)
+    config = resolve_config(settings)
+    horizon = config["horizon_hours"]
+    max_per_run = config["max_per_run"]
+    min_confidence = config["min_confidence"]
+    max_confidence = config["max_confidence"]
+    family_cap = config["family_cap"]
+    margin = config["margin"]
 
     created = skipped = 0
     used_families = {}
@@ -80,7 +82,7 @@ def _run(settings):
     for league in leagues:
         if created >= max_per_run:
             break
-        if today_used + created >= int(settings.get("agent_max_per_day") or 20):
+        if today_used + created >= config["max_per_day"]:
             break
         try:
             fixtures = _fixtures(league.provider_code, horizon)
@@ -114,7 +116,9 @@ def _run(settings):
 
     frappe.db.commit()
     return (f"Created {created} prediction(s), skipped {skipped}. "
-            f"Horizon {horizon}h, cap {max_per_run}/run.")
+            f"horizon={horizon}h band={min_confidence:.2f}-{max_confidence:.2f} "
+            f"cap={max_per_run}/run,{config['max_per_day']}/day "
+            f"margin={margin:.2f}")
 
 
 def _fixtures(provider_code, horizon):
@@ -284,7 +288,7 @@ def _created_today():
 
 def _tripped(settings):
     """Optional circuit breaker. Zero means off — the agent keeps publishing."""
-    threshold = int(settings.get("agent_pause_after_losses") or 0)
+    threshold = resolve_config(settings)["pause_after_losses"]
     if threshold <= 0:
         return False
     recent = frappe.get_all(
