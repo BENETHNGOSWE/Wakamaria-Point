@@ -130,7 +130,12 @@ def _run(settings):
     return summary
 
 
-def _fixtures(provider_code, horizon):
+def _fixtures(provider_code, horizon, stats=None):
+    """Upcoming fixtures inside the horizon, local time, kickoff not yet passed.
+
+    `stats`, when supplied, is filled with why each provider match was rejected.
+    Without it "0 fixtures" is indistinguishable from "provider returned nothing".
+    """
     """Upcoming fixtures inside the horizon, local time, kickoff not yet passed."""
     now = now_datetime()
     today = now.date()
@@ -140,20 +145,30 @@ def _fixtures(provider_code, horizon):
          "dateTo": str(today + timedelta(days=(horizon // 24) + 2))},
     )
 
+    counters = {"returned": 0, "not_predictable": 0, "past": 0,
+                "beyond_horizon": 0, "incomplete": 0}
     fixtures = []
     for match in data.get("matches") or []:
         if not match.get("id") or not match.get("utcDate"):
             continue
+        counters["returned"] += 1
         if str(match.get("status") or "").upper() not in PREDICTABLE:
+            counters["not_predictable"] += 1
             continue
         kickoff = _local(match["utcDate"])
         if kickoff is None:
+            counters["incomplete"] += 1
             continue
-        if kickoff <= now or kickoff > add_to_date(now, hours=horizon):
+        if kickoff <= now:
+            counters["past"] += 1
+            continue
+        if kickoff > add_to_date(now, hours=horizon):
+            counters["beyond_horizon"] += 1
             continue
         home = (match.get("homeTeam") or {})
         away = (match.get("awayTeam") or {})
         if not home.get("id") or not away.get("id"):
+            counters["incomplete"] += 1
             continue
         fixtures.append({
             "id": str(match["id"]),
@@ -165,6 +180,8 @@ def _fixtures(provider_code, horizon):
             "away_id": str(away["id"]),
         })
     fixtures.sort(key=lambda f: f["kickoff"])
+    if stats is not None:
+        stats.update(counters)
     return fixtures
 
 
@@ -299,6 +316,9 @@ def diagnose():
     """Explain why the agent is, or is not, creating predictions.
 
         bench --site <site> execute wakamaria.agent.diagnose
+
+    Prints line by line rather than returning one joined string, because
+    `bench execute` renders a returned string with escaped newlines.
     """
     import time
 
@@ -306,52 +326,59 @@ def diagnose():
     config = resolve_config(settings)
     key = settings.get_password("api_key", raise_exception=False)
 
-    lines = [
-        f"result sync enabled : {bool(settings.get('enabled'))}",
-        f"football-data key   : {'set' if key else 'MISSING'}",
-        f"agent enabled       : {bool(settings.get('agent_enabled'))}",
-        f"agent paused        : {bool(settings.get('agent_paused'))}",
-        (f"resolved config     : horizon={config['horizon_hours']}h "
-         f"band={config['min_confidence']}-{config['max_confidence']} "
-         f"cap={config['max_per_run']}/run"),
-        "",
-    ]
+    def say(text=""):
+        print(text)
+
+    say(f"result sync enabled : {bool(settings.get('enabled'))}")
+    say(f"football-data key   : {'set' if key else 'MISSING'}")
+    say(f"agent enabled       : {bool(settings.get('agent_enabled'))}")
+    say(f"agent paused        : {bool(settings.get('agent_paused'))}")
+    say(f"resolved config     : horizon={config['horizon_hours']}h "
+        f"band={config['min_confidence']}-{config['max_confidence']} "
+        f"cap={config['max_per_run']}/run")
+    say()
 
     leagues = frappe.get_all(
         "Wakamaria League", filters={"enabled": 1},
         fields=["name", "league_name", "provider_code"], order_by="league_name asc",
     )
-    lines.append(f"enabled leagues     : {len(leagues)}")
+    say(f"enabled leagues     : {len(leagues)}")
     if not leagues:
-        lines.append("  -> none enabled, so nothing can ever be predicted.")
-        return "\n".join(lines)
+        say("  -> none enabled, so nothing can ever be predicted.")
+        return
 
-    usable = [le for le in leagues if le.provider_code]
-    lines.append(f"with provider_code  : {len(usable)}")
+    usable = [league for league in leagues if league.provider_code]
+    say(f"with provider_code  : {len(usable)}")
     for league in leagues:
         if not league.provider_code:
-            lines.append(f"  - {league.league_name}: no provider_code, skipped")
+            say(f"  - {league.league_name}: no provider_code, skipped")
     if not usable:
-        lines.append("  -> not one league has a code. Set it on the League form.")
-        return "\n".join(lines)
+        say("  -> not one league has a code. Set it on the League form.")
+        return
 
-    lines.append("")
+    say()
     for index, league in enumerate(usable[:5]):
         if index:
             time.sleep(PROVIDER_PAUSE)
+        stats = {}
         try:
-            fixtures = _fixtures(league.provider_code, config["horizon_hours"])
+            fixtures = _fixtures(league.provider_code, config["horizon_hours"], stats)
         except Exception as error:
-            lines.append(f"  - {league.league_name} [{league.provider_code}]: "
-                         f"{_describe_error(error)}")
+            say(f"  - {league.league_name} [{league.provider_code}]: "
+                f"{_describe_error(error)}")
             continue
-        lines.append(f"  - {league.league_name} [{league.provider_code}]: "
-                     f"{len(fixtures)} fixture(s) in next {config['horizon_hours']}h")
+        say(f"  - {league.league_name} [{league.provider_code}]: "
+            f"provider returned {stats.get('returned', 0)}, "
+            f"usable {len(fixtures)} "
+            f"(already started {stats.get('past', 0)}, "
+            f"beyond {config['horizon_hours']}h {stats.get('beyond_horizon', 0)}, "
+            f"wrong status {stats.get('not_predictable', 0)})")
 
-    lines += ["",
-              "Fixtures > 0 but nothing published means the model had no history to",
-              "price from yet. Run wakamaria.sync.sync_all first to fill the cache."]
-    return "\n".join(lines)
+    say()
+    say("usable > 0 but nothing published means the model had no history to")
+    say("price from yet. Run wakamaria.sync.sync_all first to fill the cache.")
+    say("usable = 0 with 'beyond' > 0 means the fixtures exist but sit outside")
+    say("the look-ahead window: raise Look-ahead (hours) in Settings.")
 
 
 def _tripped(settings):
