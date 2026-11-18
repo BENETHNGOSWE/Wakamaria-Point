@@ -37,12 +37,26 @@
   }
   let dayCounts = {}, calMonth = null;
   const pad2 = n => String(n).padStart(2, '0');
+  const FUTURE_DAYS = 2;   // past is always open; forward stops here
 
-  function updateDateTrigger(statusMatches) {
+  const keyOf = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  function maxSelectableKey() {
+    const base = new Date(dayKey(siteNow()) + 'T00:00:00');
+    base.setDate(base.getDate() + FUTURE_DAYS);
+    return keyOf(base);
+  }
+
+  function updateDateTrigger() {
+    // Counts come from every match, so the dots do not move when you change tab:
+    // a past date must stay reachable from Finished whether or not the pending
+    // view happens to hold anything.
+    const maxKey = maxSelectableKey();
     dayCounts = {};
-    statusMatches.forEach(m => { const k = dayKey(m.kickoff); if (k) dayCounts[k] = (dayCounts[k] || 0) + 1; });
-    // A date can vanish when the list refreshes; never strand the visitor.
-    if (selectedDate !== 'All dates' && !dayCounts[selectedDate]) selectedDate = 'All dates';
+    matches.forEach(m => {
+      const k = dayKey(m.kickoff);
+      if (k && k <= maxKey) dayCounts[k] = (dayCounts[k] || 0) + 1;
+    });
+    if (selectedDate !== 'All dates' && selectedDate > maxKey) selectedDate = 'All dates';
     const label = document.getElementById('date-trigger-label');
     if (label) label.textContent = selectedDate === 'All dates' ? 'All dates' : dateLabel(selectedDate);
     const trigger = document.getElementById('date-trigger');
@@ -58,6 +72,7 @@
     const lead = (first.getDay() + 6) % 7;              // Monday-first grid
     const days = new Date(year, month + 1, 0).getDate();
     const title = first.toLocaleDateString('en-GB', {month: 'long', year: 'numeric'});
+    const maxKey = maxSelectableKey();
 
     let grid = ['Mo','Tu','We','Th','Fr','Sa','Su']
       .map(d => `<span class="cal-dow">${d}</span>`).join('');
@@ -65,9 +80,9 @@
     for (let d = 1; d <= days; d++) {
       const key = `${year}-${pad2(month + 1)}-${pad2(d)}`;
       const n = dayCounts[key] || 0;
-      const cls = 'cal-day' + (n ? ' has' : '') + (selectedDate === key ? ' sel' : '');
-      // Only days that actually hold fixtures are selectable.
-      grid += `<button class="${cls}" data-cal-day="${key}"${n ? '' : ' disabled'}>${d}${n ? '<i class="dot"></i>' : ''}</button>`;
+      const open = key <= maxKey;
+      const cls = 'cal-day' + (open ? ' open' : '') + (n ? ' has' : '') + (selectedDate === key ? ' sel' : '');
+      grid += `<button class="${cls}" data-cal-day="${key}"${open ? '' : ' disabled'}>${d}${n ? '<i class="dot"></i>' : ''}</button>`;
     }
 
     const withMatches = Object.keys(dayCounts).length;
@@ -102,10 +117,15 @@
     let q=search.trim().toLowerCase();
     const now=siteNow(), statusMatches=matches.filter(m=>inSelectedStatus(m,now));
     leagueButtons(statusMatches);
-    updateDateTrigger(statusMatches);
+    updateDateTrigger();
     const filtered=statusMatches.filter(m=>(selectedDate==='All dates'||dayKey(m.kickoff)===selectedDate)&&(selectedLeague==='All leagues'||m.league===selectedLeague)&&(!q||`${m.home_team} ${m.away_team} ${m.league} ${m.prediction||''}`.toLowerCase().includes(q)));
     const html=leagues.map(l=>{const items=filtered.filter(m=>m.league===l.name);if(!items.length)return '';return `<section class="league-card"><div class="league-head"><div class="league-icon">${image(l)}</div><div><div class="league-title">${esc(l.league_name)}</div><div class="league-sub">${esc(l.country||'Football')} · Football</div></div><span class="league-num">${items.length} ${items.length===1?'match':'matches'}</span></div><div class="column-head"><span>Date & time</span><span>Match</span><span>Prediction</span><span>Odds</span><span>Score</span><span>Result</span></div>${items.map(m=>{let d=dateParts(m.kickoff);return `<div class="match-row"><div class="date"><strong>${esc(d.day)}</strong><br>${esc(d.time)}</div><div class="teams"><div class="team-line"><span class="team-badge">${esc((m.home_team || '?')[0])}</span>${esc(m.home_team)}</div><div class="team-line"><span class="team-badge">${esc((m.away_team || '?')[0])}</span>${esc(m.away_team)}</div></div><div class="prediction">${esc(m.prediction)}<small>${esc(tipText[m.prediction]||'')}</small></div><div class="odds"><b>${m.odds ? esc(fmtOdds(m.odds)) : '—'}</b><small>${m.odds ? (m.odds_source === 'Bookmaker' ? 'book' : 'est') : ''}</small></div><div class="score">${m.result_confirmed?`${esc(m.home_score)} : ${esc(m.away_score)}`:'— : —'}<small>${m.result_confirmed?'FULL TIME':esc(m.provider_status||'PENDING')}</small></div><div class="result">${badge(m)}<button class="details" data-id="${esc(m.name)}" aria-label="View ${esc(m.home_team)} versus ${esc(m.away_team)} details">›</button></div></div>`}).join('')}</section>`}).join('');
-    document.getElementById('match-list').innerHTML=html||`<div class="empty">${selectedStatus==='finished'?'No confirmed results to show.':'No matching pending predictions to show.'}</div>`;
+    document.getElementById('match-list').innerHTML=html||`<div class="empty">${
+      selectedDate==='All dates'
+        ? (selectedStatus==='finished'?'No confirmed results to show.':'No matching pending predictions to show.')
+        : `No ${selectedStatus==='finished'?'confirmed results':'pending predictions'} on ${esc(dateLabel(selectedDate))}${
+            selectedStatus==='all'?' — try the Finished tab.':'.'}`
+    }</div>`;
   }
   async function details(name) {
     let m=matches.find(x=>x.name===name); if(!m)return;
