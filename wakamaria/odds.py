@@ -43,6 +43,9 @@ SPORT_KEYS = {
     "EL": "soccer_uefa_europa_league",
     "EC": "soccer_uefa_european_championship",
     "WC": "soccer_fifa_world_cup",
+    "BSA": "soccer_brazil_campeonato",
+    # Codes missing here still work: prices fall back to the model.
+    # Add a mapping to use a real bookmaker quote for that competition.
 }
 
 # Strip these before comparing team names across two providers.

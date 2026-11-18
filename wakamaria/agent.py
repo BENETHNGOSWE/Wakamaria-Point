@@ -6,36 +6,37 @@ anyone has a laptop open.
 
 Design rules, because this thing publishes under the operator's name:
 
-  * One bad league, one dead fixture or one rate limit must never take the run
-    down or leave a half-built prediction behind — every fixture is isolated.
+  * A bad competition, a dead fixture or a rate limit must never take the run
+    down or leave a half-built prediction behind. Every fixture is isolated.
   * A fixture that has already kicked off is never predicted. Publishing a tip
-    for a match in progress is the single fastest way to lose a reader.
+    for a match in progress is the fastest way to lose a reader.
   * Publishing the same fixture twice is never allowed, whether the first copy
     came from the agent, from OCR or from a human.
   * The kill switch (`agent_paused`) stops creation immediately but keeps
-    settlement running, because results must still resolve while the agent is
-    switched off.
+    settlement running, because results must still resolve while it is off.
+  * Fixtures are fetched in ONE request for every competition the plan allows,
+    not one request per league. See `wakamaria.fixtures`.
 """
 
-from datetime import datetime, timedelta
+import time
+from datetime import timezone
 
 import frappe
-from frappe.utils import (add_days, add_to_date, convert_utc_to_system_timezone,
-                          get_datetime, now_datetime)
+from frappe.utils import (convert_utc_to_system_timezone, get_datetime,
+                          now_datetime)
 
+from wakamaria import fixtures as fixture_rules
 from wakamaria import model, odds
 from wakamaria.agentconfig import resolve as resolve_config
 from wakamaria.diagnostics import describe_error as _describe_error
 from wakamaria.predictor import choose
 from wakamaria.provider import api_get
-from wakamaria.tips import family
 
 HISTORY_PREFIX = "wakamaria:history:"
 HISTORY_TTL = 6 * 3600
 HISTORY_LIMIT = 20
 HISTORY_FETCH_BUDGET = 8      # new provider calls per run, spread 7s apart
 PROVIDER_PAUSE = 7
-PREDICTABLE = {"SCHEDULED", "TIMED"}
 
 
 def run_agent():
@@ -60,6 +61,23 @@ def run_agent():
     return _finish(settings, summary)
 
 
+def _to_local(aware):
+    return convert_utc_to_system_timezone(
+        aware.astimezone(timezone.utc).replace(tzinfo=None))
+
+
+def _all_fixtures(horizon, stats=None):
+    """Every predictable fixture in the look-ahead, in one provider request."""
+    now = now_datetime()
+    date_from, date_to = fixture_rules.window(now, horizon)
+    data = api_get("/matches", {"dateFrom": str(date_from), "dateTo": str(date_to)})
+    selected, counters = fixture_rules.select(
+        data.get("matches"), now, horizon, to_local=_to_local)
+    if stats is not None:
+        stats.update(counters)
+    return selected
+
+
 def _run(settings):
     config = resolve_config(settings)
     horizon = config["horizon_hours"]
@@ -69,128 +87,73 @@ def _run(settings):
     family_cap = config["family_cap"]
     margin = config["margin"]
 
-    created = skipped = 0
+    created = skipped = unconfigured = 0
     used_families = {}
     budget = {"fetches": 0}
     today_used = _created_today()
-
-    leagues = frappe.get_all(
-        "Wakamaria League",
-        filters={"enabled": 1, "provider_code": ["is", "set"]},
-        fields=["name", "league_name", "provider_code"],
-    )
-
     failed = []
 
-    for league in leagues:
+    leagues = {
+        str(league.provider_code).upper(): league
+        for league in frappe.get_all(
+            "Wakamaria League",
+            filters={"enabled": 1, "provider_code": ["is", "set"]},
+            fields=["name", "league_name", "provider_code"],
+        )
+    }
+
+    try:
+        upcoming = _all_fixtures(horizon)
+    except Exception as error:
+        return (f"Fixture fetch failed: {_describe_error(error)}. "
+                f"horizon={horizon}h")
+
+    for fixture in upcoming:
         if created >= max_per_run:
             break
         if today_used + created >= config["max_per_day"]:
             break
-        try:
-            fixtures = _fixtures(league.provider_code, horizon)
-        except Exception as error:
-            # One unreadable competition must not cost us the rest of the card,
-            # but it must not vanish either — otherwise the summary reads
-            # "Created 0, skipped 0" and the operator has nothing to act on.
-            failed.append(f"{league.provider_code or league.name}: {_describe_error(error)}")
+
+        league = leagues.get(fixture["competition_code"])
+        if not league:
+            # The competition has fixtures but no enabled League record. The
+            # diagnostic names these so the operator can add them.
+            unconfigured += 1
             continue
 
-        for fixture in fixtures:
-            if created >= max_per_run:
-                break
-            try:
-                outcome = _publish_fixture(
-                    settings, league, fixture, budget,
-                    min_confidence=min_confidence,
-                    max_confidence=max_confidence,
-                    family_cap=family_cap,
-                    used_families=used_families,
-                    margin=margin,
-                )
-            except Exception:
-                frappe.log_error(
-                    title="Wakamaria agent fixture skipped",
-                    message=f"{league.name}: fixture {fixture.get('id')} could not be priced.",
-                )
-                skipped += 1
-                continue
-            if outcome:
-                created += 1
-            else:
-                skipped += 1
+        try:
+            published = _publish_fixture(
+                settings, league, fixture, budget,
+                min_confidence=min_confidence,
+                max_confidence=max_confidence,
+                family_cap=family_cap,
+                used_families=used_families,
+                margin=margin,
+            )
+        except Exception as error:
+            frappe.log_error(
+                title="Wakamaria agent fixture skipped",
+                message=f"{league.name}: fixture {fixture.get('id')}. "
+                        f"{_describe_error(error)}",
+            )
+            failed.append(f"{fixture['competition_code']}: {_describe_error(error)}")
+            skipped += 1
+            continue
+
+        if published:
+            created += 1
+        else:
+            skipped += 1
 
     frappe.db.commit()
-    summary = (f"Created {created} prediction(s), skipped {skipped}. "
+    summary = (f"Created {created} prediction(s), skipped {skipped}, "
+               f"unconfigured {unconfigured}. "
                f"horizon={horizon}h band={min_confidence:.2f}-{max_confidence:.2f} "
                f"cap={max_per_run}/run,{config['max_per_day']}/day "
                f"margin={margin:.2f}")
     if failed:
-        summary += " | league errors: " + "; ".join(failed)[:300]
+        summary += " | errors: " + "; ".join(failed)[:250]
     return summary
-
-
-def _fixtures(provider_code, horizon, stats=None):
-    """Upcoming fixtures inside the horizon, local time, kickoff not yet passed.
-
-    `stats`, when supplied, is filled with why each provider match was rejected.
-    Without it "0 fixtures" is indistinguishable from "provider returned nothing".
-    """
-    """Upcoming fixtures inside the horizon, local time, kickoff not yet passed."""
-    now = now_datetime()
-    today = now.date()
-    data = api_get(
-        f"/competitions/{provider_code}/matches",
-        {"dateFrom": str(today - timedelta(days=1)),
-         "dateTo": str(today + timedelta(days=(horizon // 24) + 2))},
-    )
-
-    counters = {"returned": 0, "not_predictable": 0, "past": 0,
-                "beyond_horizon": 0, "incomplete": 0}
-    fixtures = []
-    for match in data.get("matches") or []:
-        if not match.get("id") or not match.get("utcDate"):
-            continue
-        counters["returned"] += 1
-        if str(match.get("status") or "").upper() not in PREDICTABLE:
-            counters["not_predictable"] += 1
-            continue
-        kickoff = _local(match["utcDate"])
-        if kickoff is None:
-            counters["incomplete"] += 1
-            continue
-        if kickoff <= now:
-            counters["past"] += 1
-            continue
-        if kickoff > add_to_date(now, hours=horizon):
-            counters["beyond_horizon"] += 1
-            continue
-        home = (match.get("homeTeam") or {})
-        away = (match.get("awayTeam") or {})
-        if not home.get("id") or not away.get("id"):
-            counters["incomplete"] += 1
-            continue
-        fixtures.append({
-            "id": str(match["id"]),
-            "kickoff": kickoff,
-            "status": match.get("status"),
-            "home_name": home.get("name") or "",
-            "away_name": away.get("name") or "",
-            "home_id": str(home["id"]),
-            "away_id": str(away["id"]),
-        })
-    fixtures.sort(key=lambda f: f["kickoff"])
-    if stats is not None:
-        stats.update(counters)
-    return fixtures
-
-
-def _local(utc_iso):
-    try:
-        moment = datetime.fromisoformat(str(utc_iso).replace("Z", "+00:00"))
-        return convert_utc_to_system_timezone(moment.replace(tzinfo=None)).replace(tzinfo=None)
-    except (ValueError, TypeError):
-        return None
 
 
 def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
@@ -273,7 +236,6 @@ def _history(team_id, budget):
     if budget["fetches"] >= HISTORY_FETCH_BUDGET:
         return []
 
-    import time
     time.sleep(PROVIDER_PAUSE)
     try:
         payload = api_get(f"/teams/{team_id}/matches",
@@ -305,11 +267,57 @@ def _history(team_id, budget):
 
 
 def _created_today():
-    start = get_datetime(now_datetime()).replace(hour=0, minute=0, second=0, microsecond=0)
+    start = get_datetime(now_datetime()).replace(hour=0, minute=0, second=0,
+                                                 microsecond=0)
     return frappe.db.count("Wakamaria Match", {
         "predicted_by": "Agent",
         "creation": [">=", start],
     })
+
+
+def seed_leagues(enable=1):
+    """Create a League for every competition your plan can access.
+
+        bench --site <site> execute wakamaria.agent.seed_leagues
+
+    Idempotent: a competition whose code already exists is left untouched, so
+    re-running never overwrites a name, image or enabled flag you set by hand.
+
+    football-data.org only lists competitions your token is entitled to, so this
+    cannot import a league you would then get 403 on.
+    """
+    data = api_get("/competitions", {})
+    existing = {
+        str(row.provider_code).upper(): row
+        for row in frappe.get_all("Wakamaria League",
+                                  fields=["name", "provider_code"])
+        if row.provider_code
+    }
+
+    created, skipped = 0, 0
+    for competition in data.get("competitions") or []:
+        code = str(competition.get("code") or "").upper()
+        name = competition.get("name") or ""
+        if not code or not name:
+            # Cups and one-off competitions often carry no stable code.
+            skipped += 1
+            continue
+        if code in existing:
+            skipped += 1
+            continue
+        frappe.get_doc({
+            "doctype": "Wakamaria League",
+            "league_name": name,
+            "country": (competition.get("area") or {}).get("name") or "",
+            "provider_code": code,
+            "enabled": 1 if int(enable) else 0,
+        }).insert(ignore_permissions=True)
+        created += 1
+
+    frappe.db.commit()
+    print(f"Created {created} league(s), skipped {skipped} "
+          f"(already present or had no code).")
+    print("Run wakamaria.agent.diagnose next to see which now have fixtures.")
 
 
 def diagnose():
@@ -320,8 +328,6 @@ def diagnose():
     Prints line by line rather than returning one joined string, because
     `bench execute` renders a returned string with escaped newlines.
     """
-    import time
-
     settings = frappe.get_single("Wakamaria Settings")
     config = resolve_config(settings)
     key = settings.get_password("api_key", raise_exception=False)
@@ -342,43 +348,48 @@ def diagnose():
         "Wakamaria League", filters={"enabled": 1},
         fields=["name", "league_name", "provider_code"], order_by="league_name asc",
     )
+    coded = {str(le.provider_code).upper(): le for le in leagues if le.provider_code}
     say(f"enabled leagues     : {len(leagues)}")
-    if not leagues:
-        say("  -> none enabled, so nothing can ever be predicted.")
-        return
-
-    usable = [league for league in leagues if league.provider_code]
-    say(f"with provider_code  : {len(usable)}")
+    say(f"with provider_code  : {len(coded)}")
     for league in leagues:
         if not league.provider_code:
-            say(f"  - {league.league_name}: no provider_code, skipped")
-    if not usable:
-        say("  -> not one league has a code. Set it on the League form.")
+            say(f"  - {league.league_name}: no provider_code, invisible to the agent")
+    say()
+
+    stats = {}
+    try:
+        upcoming = _all_fixtures(config["horizon_hours"], stats)
+    except Exception as error:
+        say(f"fixture fetch failed: {_describe_error(error)}")
         return
 
+    say(f"provider returned   : {stats.get('returned', 0)} match(es), "
+        f"usable {len(upcoming)} "
+        f"(started {stats.get('past', 0)}, "
+        f"beyond {config['horizon_hours']}h {stats.get('beyond_horizon', 0)}, "
+        f"wrong status {stats.get('not_predictable', 0)})")
     say()
-    for index, league in enumerate(usable[:5]):
-        if index:
-            time.sleep(PROVIDER_PAUSE)
-        stats = {}
-        try:
-            fixtures = _fixtures(league.provider_code, config["horizon_hours"], stats)
-        except Exception as error:
-            say(f"  - {league.league_name} [{league.provider_code}]: "
-                f"{_describe_error(error)}")
-            continue
-        say(f"  - {league.league_name} [{league.provider_code}]: "
-            f"provider returned {stats.get('returned', 0)}, "
-            f"usable {len(fixtures)} "
-            f"(already started {stats.get('past', 0)}, "
-            f"beyond {config['horizon_hours']}h {stats.get('beyond_horizon', 0)}, "
-            f"wrong status {stats.get('not_predictable', 0)})")
 
-    say()
-    say("usable > 0 but nothing published means the model had no history to")
-    say("price from yet. Run wakamaria.sync.sync_all first to fill the cache.")
-    say("usable = 0 with 'beyond' > 0 means the fixtures exist but sit outside")
-    say("the look-ahead window: raise Look-ahead (hours) in Settings.")
+    grouped = fixture_rules.group_by_competition(upcoming)
+    if not grouped:
+        say("No competition has a fixture inside the look-ahead window.")
+        say("Raise Look-ahead (hours) if you expected some.")
+        return
+
+    say("competitions with usable fixtures:")
+    for code, rows in sorted(grouped.items(), key=lambda kv: -len(kv[1])):
+        league = coded.get(code)
+        if league:
+            say(f"  OK   {code:<5} {league.league_name}: {len(rows)} fixture(s)")
+        else:
+            name = rows[0].get("competition_name") or code
+            say(f"  MISS {code:<5} {name}: {len(rows)} fixture(s) "
+                f"-> no enabled League record, add one")
+
+    missing = sorted(set(coded) - set(grouped))
+    if missing:
+        say()
+        say("configured but nothing in the window: " + ", ".join(missing))
 
 
 def _tripped(settings):
