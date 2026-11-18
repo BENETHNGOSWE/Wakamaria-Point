@@ -70,6 +70,8 @@ def cache_recent_team_history(rows):
         for m in payload.get("matches", []):
             score = regulation_score(m)
             if score is None: continue
-            values.append({"date":m.get("utcDate", ""), "home":(m.get("homeTeam") or {}).get("name", ""), "away":(m.get("awayTeam") or {}).get("name", ""), "score":list(score)})
+            # home_id/away_id let the pricing model work out which side this team
+            # was on without trusting a club name to match between providers.
+            values.append({"date":m.get("utcDate", ""), "home":(m.get("homeTeam") or {}).get("name", ""), "away":(m.get("awayTeam") or {}).get("name", ""), "home_id":str((m.get("homeTeam") or {}).get("id") or ""), "away_id":str((m.get("awayTeam") or {}).get("id") or ""), "score":list(score)})
         frappe.cache().set_value(key, values, expires_in_sec=6*3600)
         attempted += 1

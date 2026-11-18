@@ -1,5 +1,5 @@
 """Pure 90-minute prediction evaluation; no Frappe dependency."""
-TIPS = ("1", "X", "2", "1X", "X2", "12", "Over 2.5", "Under 2.5", "Under 3.5", "BTTS Yes", "BTTS No")
+from wakamaria.tips import TIPS  # noqa: F401  (re-exported for existing callers)
 
 def evaluate(tip, home, away):
     if tip not in TIPS or home is None or away is None:

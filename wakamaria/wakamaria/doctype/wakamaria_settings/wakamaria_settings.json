@@ -15,7 +15,23 @@
     "history_enabled",
     "last_sync",
     "last_error",
-    "ocr_tessdata_dir"
+    "ocr_tessdata_dir",
+    "agent_section",
+    "agent_enabled",
+    "agent_paused",
+    "agent_horizon_hours",
+    "agent_max_per_run",
+    "agent_max_per_day",
+    "agent_min_confidence",
+    "agent_max_confidence",
+    "agent_family_cap",
+    "agent_margin",
+    "agent_pause_after_losses",
+    "odds_col_section",
+    "odds_api_enabled",
+    "odds_api_key",
+    "agent_last_run",
+    "agent_last_result"
   ],
   "fields": [
     {
@@ -85,6 +101,110 @@
       "fieldtype": "Check",
       "default": "0",
       "description": "Requires bulk fixture matching. Only normal FINISHED games with consistent FT and running scores, at least two hours after kickoff. Test on staging. Provider score semantics are not officially confirmed."
+    },
+    {
+      "fieldname": "agent_section",
+      "fieldtype": "Section Break",
+      "label": "Prediction Agent"
+    },
+    {
+      "fieldname": "agent_enabled",
+      "fieldtype": "Check",
+      "label": "Enable Agent",
+      "default": "0"
+    },
+    {
+      "fieldname": "agent_paused",
+      "fieldtype": "Check",
+      "label": "Pause Agent (kill switch)",
+      "default": "0",
+      "description": "Stops new predictions. Results keep settling."
+    },
+    {
+      "fieldname": "agent_horizon_hours",
+      "fieldtype": "Int",
+      "label": "Look-ahead (hours)",
+      "default": "36",
+      "description": "How far ahead to predict fixtures.",
+      "precision": "0"
+    },
+    {
+      "fieldname": "agent_max_per_run",
+      "fieldtype": "Int",
+      "label": "Max predictions per run",
+      "default": "12",
+      "precision": "0"
+    },
+    {
+      "fieldname": "agent_max_per_day",
+      "fieldtype": "Int",
+      "label": "Max predictions per day",
+      "default": "20",
+      "precision": "0"
+    },
+    {
+      "fieldname": "agent_min_confidence",
+      "fieldtype": "Float",
+      "label": "Minimum confidence",
+      "default": "0.45",
+      "description": "0.45 is roughly a 2.10 price.",
+      "precision": "2"
+    },
+    {
+      "fieldname": "agent_max_confidence",
+      "fieldtype": "Float",
+      "label": "Maximum confidence",
+      "default": "0.66",
+      "description": "0.66 is roughly a 1.43 price. Anything shorter is not worth publishing.",
+      "precision": "2"
+    },
+    {
+      "fieldname": "agent_family_cap",
+      "fieldtype": "Int",
+      "label": "Max picks per market family per run",
+      "default": "2",
+      "precision": "0"
+    },
+    {
+      "fieldname": "agent_margin",
+      "fieldtype": "Float",
+      "label": "Model margin",
+      "default": "0.06",
+      "precision": "2"
+    },
+    {
+      "fieldname": "agent_pause_after_losses",
+      "fieldtype": "Int",
+      "label": "Auto-pause after N consecutive losses",
+      "default": "0",
+      "description": "0 disables the circuit breaker.",
+      "precision": "0"
+    },
+    {
+      "fieldname": "odds_col_section",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "odds_api_enabled",
+      "fieldtype": "Check",
+      "label": "Use Bookmaker Odds",
+      "default": "0",
+      "description": "Falls back to model estimates when a fixture is not covered."
+    },
+    {
+      "fieldname": "odds_api_key",
+      "fieldtype": "Password",
+      "label": "the-odds-api Key"
+    },
+    {
+      "fieldname": "agent_last_run",
+      "fieldtype": "Datetime",
+      "label": "Agent Last Run"
+    },
+    {
+      "fieldname": "agent_last_result",
+      "fieldtype": "Small Text",
+      "label": "Agent Last Result"
     }
   ],
   "permissions": [

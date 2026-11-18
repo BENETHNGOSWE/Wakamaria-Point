@@ -10,6 +10,10 @@
     "away_team",
     "kickoff",
     "prediction",
+    "odds",
+    "odds_source",
+    "confidence",
+    "predicted_by",
     "published",
     "provider_section",
     "provider_match_id",
@@ -68,6 +72,40 @@
       "options": "\n1\nX\n2\n1X\nX2\n12\nOver 2.5\nUnder 2.5\nUnder 3.5\nBTTS Yes\nBTTS No",
       "reqd": 1,
       "in_list_view": 1
+    },
+    {
+      "fieldname": "odds",
+      "fieldtype": "Float",
+      "label": "Odds",
+      "precision": "2",
+      "in_list_view": 1,
+      "columns": 1,
+      "description": "Decimal price shown to visitors. Filled by the agent or typed by hand."
+    },
+    {
+      "fieldname": "odds_source",
+      "fieldtype": "Select",
+      "label": "Odds Source",
+      "options": "Model\nBookmaker\nManual",
+      "default": "Manual",
+      "in_list_view": 1,
+      "description": "Model = Wakamaria estimate. Bookmaker = a real quoted price."
+    },
+    {
+      "fieldname": "confidence",
+      "fieldtype": "Float",
+      "label": "Confidence",
+      "precision": "3",
+      "description": "Model probability for the published selection (0-1). Internal only."
+    },
+    {
+      "fieldname": "predicted_by",
+      "fieldtype": "Select",
+      "label": "Predicted By",
+      "options": "Manual\nOCR\nAgent",
+      "default": "Manual",
+      "in_list_view": 1,
+      "description": "Who created this prediction. The agent only touches rows it made."
     },
     {
       "fieldname": "published",
