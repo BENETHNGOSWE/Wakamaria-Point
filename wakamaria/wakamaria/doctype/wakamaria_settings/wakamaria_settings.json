@@ -7,6 +7,11 @@
   "field_order": [
     "enabled",
     "api_key",
+    "goal_api_key",
+    "goal_auto_link",
+    "goal_auto_results",
+    "goal_last_sync",
+    "goal_sync_error",
     "history_enabled",
     "last_sync",
     "last_error",
@@ -24,6 +29,12 @@
       "label": "football-data.org API Key",
       "fieldtype": "Password",
       "description": "Stored using Frappe encrypted password storage. Never expose in website code."
+    },
+    {
+      "fieldname": "goal_api_key",
+      "label": "GOAL API Key",
+      "fieldtype": "Password",
+      "description": "Encrypted server-side. Used for GOAL fixture preview, matching and optional experimental result updates."
     },
     {
       "fieldname": "history_enabled",
@@ -48,6 +59,32 @@
       "label": "Optional OCR Model Directory",
       "fieldtype": "Data",
       "description": "Absolute path to a folder containing eng.traineddata. Leave blank to use the server default."
+    },
+    {
+      "fieldname": "goal_auto_link",
+      "label": "Enable experimental GOAL bulk fixture matching",
+      "fieldtype": "Check",
+      "default": "0",
+      "description": "Hourly, unique league/team/kickoff matches only. This does not by itself settle results."
+    },
+    {
+      "fieldname": "goal_last_sync",
+      "label": "GOAL Last Sync",
+      "fieldtype": "Datetime",
+      "read_only": 1
+    },
+    {
+      "fieldname": "goal_sync_error",
+      "label": "GOAL Last Sync Error",
+      "fieldtype": "Small Text",
+      "read_only": 1
+    },
+    {
+      "fieldname": "goal_auto_results",
+      "label": "Enable experimental GOAL result updates",
+      "fieldtype": "Check",
+      "default": "0",
+      "description": "Requires bulk fixture matching. Only normal FINISHED games with consistent FT and running scores, at least two hours after kickoff. Test on staging. Provider score semantics are not officially confirmed."
     }
   ],
   "permissions": [

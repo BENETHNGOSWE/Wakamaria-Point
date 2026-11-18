@@ -8,6 +8,7 @@
     "league_name",
     "country",
     "provider_code",
+    "goal_api_league_id",
     "league_image",
     "enabled"
   ],
@@ -29,6 +30,12 @@
       "label": "football-data.org Competition Code",
       "fieldtype": "Data",
       "description": "Example: PL, PD, CL"
+    },
+    {
+      "fieldname": "goal_api_league_id",
+      "label": "GOAL API League ID",
+      "fieldtype": "Data",
+      "description": "Competition ID provided by GOAL API. Different divisions may share an ID; candidates are still checked by team and kickoff."
     },
     {
       "fieldname": "league_image",

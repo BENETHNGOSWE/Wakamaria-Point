@@ -16,6 +16,13 @@
     "provider_home_team_id",
     "provider_away_team_id",
     "provider_status",
+    "goal_section",
+    "goal_match_id",
+    "goal_home_team_id",
+    "goal_away_team_id",
+    "goal_last_status",
+    "goal_last_checked",
+    "goal_result_managed",
     "result_section",
     "result_confirmed",
     "home_score",
@@ -141,6 +148,49 @@
       "fieldname": "notes",
       "label": "Private Admin Notes",
       "fieldtype": "Small Text"
+    },
+    {
+      "fieldname": "goal_section",
+      "label": "GOAL API Fixture",
+      "fieldtype": "Section Break"
+    },
+    {
+      "fieldname": "goal_match_id",
+      "label": "GOAL Fixture ID",
+      "fieldtype": "Data",
+      "read_only": 1
+    },
+    {
+      "fieldname": "goal_home_team_id",
+      "label": "GOAL Home Team ID",
+      "fieldtype": "Data",
+      "read_only": 1
+    },
+    {
+      "fieldname": "goal_away_team_id",
+      "label": "GOAL Away Team ID",
+      "fieldtype": "Data",
+      "read_only": 1
+    },
+    {
+      "fieldname": "goal_last_status",
+      "label": "GOAL Last Status",
+      "fieldtype": "Data",
+      "read_only": 1
+    },
+    {
+      "fieldname": "goal_last_checked",
+      "label": "GOAL Last Checked",
+      "fieldtype": "Datetime",
+      "read_only": 1
+    },
+    {
+      "fieldname": "goal_result_managed",
+      "label": "GOAL Managed Result",
+      "fieldtype": "Check",
+      "read_only": 1,
+      "default": "0",
+      "description": "Marks scores automatically confirmed by GOAL; manual edits take ownership."
     }
   ],
   "permissions": [
