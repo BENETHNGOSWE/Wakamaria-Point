@@ -22,8 +22,7 @@ import time
 from datetime import timezone
 
 import frappe
-from frappe.utils import (convert_utc_to_system_timezone, get_datetime,
-                          now_datetime)
+from frappe.utils import convert_utc_to_system_timezone, now_datetime
 
 from wakamaria import fixtures as fixture_rules
 from wakamaria import model, odds
@@ -157,7 +156,8 @@ def _run(settings):
     summary = (f"Created {created} prediction(s), skipped {skipped}, "
                f"unconfigured {unconfigured}. "
                f"horizon={horizon}h band={min_confidence:.2f}-{max_confidence:.2f} "
-               f"cap={max_per_run}/run,{config['max_per_day']}/day "
+               f"cap={max_per_run}/run,{config['max_per_day']}/day,"
+               f"{today_used} already today "
                f"margin={margin:.2f}"
                f" | stop: {stop_reason or 'all fixtures handled'}")
     if failed:
@@ -276,8 +276,13 @@ def _history(team_id, budget):
 
 
 def _created_today():
-    start = get_datetime(now_datetime()).replace(hour=0, minute=0, second=0,
-                                                 microsecond=0)
+    """How many agent predictions already exist today.
+
+    Compared as "YYYY-MM-DD 00:00:00", not as a datetime object: the object
+    form did not reliably match the stored column, which let the daily cap
+    overshoot (24 published against a limit of 20).
+    """
+    start = f"{now_datetime().date()} 00:00:00"
     return frappe.db.count("Wakamaria Match", {
         "predicted_by": "Agent",
         "creation": [">=", start],
