@@ -7,17 +7,29 @@
   const safeImage = path => typeof path==='string' && /^\/(files|assets)\//.test(path) ? path : defaultImage;
   const image = l => `<img src="${esc(safeImage(l.league_image))}" alt="" data-league-image>`;
   function badge(m) { let o=m.result_confirmed && ['Win','Lose'].includes(m.outcome) ? m.outcome : 'Pending'; let cls=o==='Win'?'correct':o==='Lose'?'incorrect':'pending'; return `<span class="outcome ${cls}">${o==='Win'?'✓ Win':o==='Lose'?'✕ Lose':'◷ Pending'}</span>`; }
-  function leagueButtons() {
-    let html=leagues.map(l=>`<button class="side-btn ${selectedLeague===l.name?'active':''}" data-league="${esc(l.name)}"><span class="side-ic">${image(l)}</span>${esc(l.league_name)} <span class="count">${matches.filter(m=>m.league===l.name).length}</span></button>`).join('');
+  function siteNow() {
+    try { return new Intl.DateTimeFormat('sv-SE', {timeZone:siteTimezone || 'UTC', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23'}).format(new Date()).replace(' ', 'T'); }
+    catch (_) { return new Date().toISOString().slice(0,19); }
+  }
+  function inSelectedStatus(m, now) {
+    if (selectedStatus==='finished') return Boolean(m.result_confirmed);
+    if (m.result_confirmed) return false;
+    if (selectedStatus==='upcoming') return String(m.kickoff||'').replace(' ', 'T') > now;
+    return true; // All matches means all results still awaiting confirmation.
+  }
+  function leagueButtons(statusMatches) {
+    let html=leagues.map(l=>`<button class="side-btn ${selectedLeague===l.name?'active':''}" data-league="${esc(l.name)}"><span class="side-ic">${image(l)}</span>${esc(l.league_name)} <span class="count">${statusMatches.filter(m=>m.league===l.name).length}</span></button>`).join('');
     document.getElementById('side-leagues').innerHTML=html;
-    document.getElementById('mobile-leagues').innerHTML=`<button class="side-btn ${selectedLeague==='All leagues'?'active':''}" data-league="All leagues">All matches</button>`+html;
-    document.querySelector('.sidebar [data-league="All leagues"]').classList.toggle('active',selectedLeague==='All leagues');document.getElementById('all-count').textContent=matches.length;
+    document.getElementById('mobile-leagues').innerHTML=`<button class="side-btn ${selectedLeague==='All leagues'?'active':''}" data-league="All leagues">All leagues</button>`+html;
+    document.querySelector('.sidebar [data-league="All leagues"]').classList.toggle('active',selectedLeague==='All leagues');document.getElementById('all-count').textContent=statusMatches.length;
   }
   function render(){
-    leagueButtons();let q=search.trim().toLowerCase();
-    const filtered=matches.filter(m=>(selectedLeague==='All leagues'||m.league===selectedLeague)&&(selectedStatus==='all'||(selectedStatus==='finished'?m.result_confirmed:!m.result_confirmed))&&(!q||`${m.home_team} ${m.away_team} ${m.league}`.toLowerCase().includes(q)));
+    let q=search.trim().toLowerCase();
+    const now=siteNow(), statusMatches=matches.filter(m=>inSelectedStatus(m,now));
+    leagueButtons(statusMatches);
+    const filtered=statusMatches.filter(m=>(selectedLeague==='All leagues'||m.league===selectedLeague)&&(!q||`${m.home_team} ${m.away_team} ${m.league}`.toLowerCase().includes(q)));
     const html=leagues.map(l=>{const items=filtered.filter(m=>m.league===l.name);if(!items.length)return '';return `<section class="league-card"><div class="league-head"><div class="league-icon">${image(l)}</div><div><div class="league-title">${esc(l.league_name)}</div><div class="league-sub">${esc(l.country||'Football')} · Football</div></div><span class="league-num">${items.length} ${items.length===1?'match':'matches'}</span></div><div class="column-head"><span>Date & time</span><span>Match</span><span>Prediction</span><span>Score</span><span>Result</span></div>${items.map(m=>{let d=dateParts(m.kickoff);return `<div class="match-row"><div class="date"><strong>${esc(d.day)}</strong><br>${esc(d.time)}</div><div class="teams"><div class="team-line"><span class="team-badge">${esc(m.home_team[0])}</span>${esc(m.home_team)}</div><div class="team-line"><span class="team-badge">${esc(m.away_team[0])}</span>${esc(m.away_team)}</div></div><div class="prediction">${esc(m.prediction)}<small>${esc(tipText[m.prediction]||'')}</small></div><div class="score">${m.result_confirmed?`${esc(m.home_score)} : ${esc(m.away_score)}`:'— : —'}<small>${m.result_confirmed?'FULL TIME':esc(m.provider_status||'PENDING')}</small></div><div class="result">${badge(m)}<button class="details" data-id="${esc(m.name)}" aria-label="View ${esc(m.home_team)} versus ${esc(m.away_team)} details">›</button></div></div>`}).join('')}</section>`}).join('');
-    document.getElementById('match-list').innerHTML=html||'<div class="empty">No predictions to show yet. Please check back later.</div>';
+    document.getElementById('match-list').innerHTML=html||`<div class="empty">${selectedStatus==='finished'?'No confirmed results to show.':'No matching pending predictions to show.'}</div>`;
   }
   async function details(name) {
     let m=matches.find(x=>x.name===name); if(!m)return;
@@ -30,8 +42,34 @@
       body.innerHTML=header+`<div class="history-grid">${hist(m.home_team,data.home)}${hist(m.away_team,data.away)}</div>`;
     } catch(e){body.innerHTML=header+'<p class="history-desc">Match history is currently unavailable.</p>';}
   }
+  function setStatus(status) {
+    selectedStatus=status;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.status===status));
+    document.getElementById('predictions-link').classList.toggle('active',status!=='finished');
+    document.getElementById('results-link').classList.toggle('active',status==='finished');
+    render();
+  }
   document.addEventListener('error',e=>{if(e.target.matches('[data-league-image]')&&e.target.src!==defaultImage)e.target.src=defaultImage},true);
-  document.addEventListener('click',e=>{const league=e.target.closest('[data-league]');if(league){selectedLeague=league.dataset.league;render()}const tab=e.target.closest('[data-status]');if(tab){selectedStatus=tab.dataset.status;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===tab));render()}const detail=e.target.closest('[data-id]');if(detail)details(detail.dataset.id);if(e.target.id==='close'||e.target.id==='modal')document.getElementById('modal').classList.remove('open')});
-  document.getElementById('search').addEventListener('input',e=>{search=e.target.value;render()});document.getElementById('results-link').addEventListener('click',()=>{selectedStatus='finished';document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.status==='finished'));render()});document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('modal').classList.remove('open')});
-  fetch('/api/method/wakamaria.api.list_matches').then(r=>{if(!r.ok)throw Error();return r.json()}).then(data=>{leagues=data.message.leagues||[];matches=(data.message.matches||[]).sort((a,b)=>String(a.kickoff).localeCompare(String(b.kickoff)));siteTimezone=data.message.timezone||'';let notes=document.querySelectorAll('.bottom-note span');if(notes[1])notes[1].textContent='Times shown in '+siteTimezone;render()}).catch(()=>{document.getElementById('match-list').innerHTML='<div class="empty">Unable to load matches. Please try again later.</div>'});
+  document.addEventListener('click',e=>{const league=e.target.closest('[data-league]');if(league){selectedLeague=league.dataset.league;render()}const tab=e.target.closest('[data-status]');if(tab)setStatus(tab.dataset.status);const detail=e.target.closest('[data-id]');if(detail)details(detail.dataset.id);if(e.target.id==='close'||e.target.id==='modal')document.getElementById('modal').classList.remove('open')});
+  document.getElementById('search').addEventListener('input',e=>{search=e.target.value;render()});document.getElementById('predictions-link').addEventListener('click',()=>setStatus('all'));document.getElementById('results-link').addEventListener('click',()=>setStatus('finished'));document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('modal').classList.remove('open')});
+  let loaded=false, loading=false;
+  async function refreshMatches() {
+    if (loading) return;
+    loading=true;
+    try {
+      const response=await fetch('/api/method/wakamaria.api.list_matches', {cache:'no-store'});
+      if (!response.ok) throw Error();
+      const data=await response.json();
+      leagues=data.message.leagues||[];
+      matches=(data.message.matches||[]).sort((a,b)=>String(a.kickoff).localeCompare(String(b.kickoff)));
+      siteTimezone=data.message.timezone||'';
+      const notes=document.querySelectorAll('.bottom-note span');
+      if(notes[1]) notes[1].textContent='Times shown in '+siteTimezone;
+      loaded=true; render();
+    } catch (_) {
+      if(!loaded) document.getElementById('match-list').innerHTML='<div class="empty">Unable to load matches. Please try again later.</div>';
+    } finally { loading=false; }
+  }
+  refreshMatches();
+  setInterval(refreshMatches, 60000);
 })();
