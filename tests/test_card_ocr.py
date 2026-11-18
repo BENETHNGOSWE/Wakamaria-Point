@@ -4,7 +4,7 @@ from wakamaria.card_ocr import detect_cards, parse_teams, parse_tip
 
 class CardOCRTest(unittest.TestCase):
     def test_all_tips_and_reject_garbage(self):
-        for value in ('1', '2', 'X', '1X', 'X2', '12', 'Over 2.5', 'Under 2.5', 'BTTS Yes', 'BTTS No'):
+        for value in ('1', '2', 'X', '1X', 'X2', '12', 'Over 2.5', 'Under 2.5', 'Under 3.5', 'BTTS Yes', 'BTTS No'):
             self.assertEqual(parse_tip(f'Tip: {value} Odds: 1.29'), value)
         for text in ('Tip: Overs', 'Tip: W', 'Odds: 1.29', 'Tip: 12x'):
             self.assertEqual(parse_tip(text), '')
@@ -12,6 +12,7 @@ class CardOCRTest(unittest.TestCase):
         self.assertEqual(parse_tip('Tip: Over2.S 0dds: 1.66'), 'Over 2.5')
         self.assertEqual(parse_tip('Tip: Under 2,5 Odds: 1.66'), 'Under 2.5')
         self.assertEqual(parse_tip('Tip: Over2.8 Odds: 1.66'), '')
+        self.assertEqual(parse_tip('Tip: Over3.5 Odds: 1.66'), '')
 
     def test_fused_score_suggests_unverified_fragments(self):
         self.assertEqual(parse_teams('spainiEm 23 =#=England'), ('spainiEm', 'England'))

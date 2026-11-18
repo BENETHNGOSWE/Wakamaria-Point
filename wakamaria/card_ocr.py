@@ -13,7 +13,7 @@ from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 
 MAX_CARDS = 8
 MAX_PIXELS = 12_000_000
-TIPS = ('Over 2.5', 'Under 2.5', 'BTTS Yes', 'BTTS No', '1X', 'X2', '12', '1', 'X', '2')
+TIPS = ('Over 2.5', 'Under 2.5', 'Under 3.5', 'BTTS Yes', 'BTTS No', '1X', 'X2', '12', '1', 'X', '2')
 
 def detect_cards(image):
     """Find broad light-grey competition headers typical of the reference app."""
@@ -85,9 +85,10 @@ def extract_cards(path, binary, tmpdir, tessdata_dir=None):
 def parse_tip(text):
     # OCR sometimes renders 2.5 as 2.S or omits the space after Over.
     # These are suggestions only; staff must check the screenshot before import.
-    goal = re.search(r"\btip\s*[:;]\s*(over|under)\s*2\s*[.,]\s*([5s])(?=\s|$|[^\w.])", text, re.I)
+    goal = re.search(r"\btip\s*[:;]\s*(over|under)\s*([23])\s*[.,]\s*([5s])(?=\s|$|[^\w.])", text, re.I)
     if goal:
-        return goal.group(1).capitalize() + " 2.5"
+        value = goal.group(1).capitalize() + " " + goal.group(2) + ".5"
+        return value if value in TIPS else ""
     # Never guess ambiguous OCR such as "Overs" or a bare number.
     match = re.search(r"\btip\s*[:;]\s*(btts\s*(?:yes|no)|1x|x2|12|1|x|2)(?=\s|$|[^\w.])", text, re.I)
     if not match:

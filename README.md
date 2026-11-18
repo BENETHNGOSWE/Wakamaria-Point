@@ -50,7 +50,7 @@ The sync retrieves matched IDs in batches, handles up to four uncached team hist
 
 ## Settlement rules
 
-All outcomes are based on **90 minutes plus stoppage time**, not extra time or penalties. Supported prediction codes: `1`, `X`, `2`, `1X`, `X2`, `12`, `Over 2.5`, `Under 2.5`, `BTTS Yes`, `BTTS No`. A score is automatically settled only when provider status is `FINISHED` and an unambiguous 90-minute score exists. `AWARDED`, postponed and incomplete matches stay pending. When the source retracts a final result, sync clears the confirmation so an old outcome is not displayed.
+All outcomes are based on **90 minutes plus stoppage time**, not extra time or penalties. Supported prediction codes: `1`, `X`, `2`, `1X`, `X2`, `12`, `Over 2.5`, `Under 2.5`, `Under 3.5`, `BTTS Yes`, `BTTS No`. A score is automatically settled only when provider status is `FINISHED` and an unambiguous 90-minute score exists. `AWARDED`, postponed and incomplete matches stay pending. When the source retracts a final result, sync clears the confirmation so an old outcome is not displayed.
 
 Staff should enter predictions before kickoff and preserve records of their publication; this initial version does not provide a tamper-proof prediction audit or lock edits after kickoff. Never present its win rate as guaranteed.
 

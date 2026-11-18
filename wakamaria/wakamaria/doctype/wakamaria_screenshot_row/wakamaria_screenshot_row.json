@@ -52,7 +52,7 @@
       "fieldname": "prediction",
       "label": "Prediction",
       "fieldtype": "Select",
-      "options": "\n1\nX\n2\n1X\nX2\n12\nOver 2.5\nUnder 2.5\nBTTS Yes\nBTTS No"
+      "options": "\n1\nX\n2\n1X\nX2\n12\nOver 2.5\nUnder 2.5\nUnder 3.5\nBTTS Yes\nBTTS No"
     },
     {
       "fieldname": "card_ocr",

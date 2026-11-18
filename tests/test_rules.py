@@ -10,6 +10,8 @@ class RulesTest(unittest.TestCase):
     def test_goals_and_btts(self):
         self.assertEqual(evaluate("Over 2.5", 2, 1), "Win")
         self.assertEqual(evaluate("Under 2.5", 0, 2), "Win")
+        self.assertEqual(evaluate("Under 3.5", 2, 1), "Win")
+        self.assertEqual(evaluate("Under 3.5", 2, 2), "Lose")
         self.assertEqual(evaluate("BTTS No", 0, 1), "Win")
         self.assertEqual(evaluate("BTTS Yes", 0, 1), "Lose")
     def test_unconfirmed_and_invalid(self):
