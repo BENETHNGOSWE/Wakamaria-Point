@@ -35,25 +35,74 @@
       return new Date(key+'T00:00:00').toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'});
     } catch (_) { return key; }
   }
-  function dateStrip(statusMatches) {
-    const counts = {};
-    statusMatches.forEach(m => { const k = dayKey(m.kickoff); if (k) counts[k] = (counts[k] || 0) + 1; });
-    const keys = Object.keys(counts).sort();
-    // A date can disappear when the list refreshes; never leave the user stranded.
-    if (selectedDate !== 'All dates' && !counts[selectedDate]) selectedDate = 'All dates';
-    const strip = document.getElementById('date-strip');
-    if (!strip) return;
-    if (keys.length < 2) { strip.innerHTML = ''; strip.style.display = 'none'; return; }
-    strip.style.display = 'flex';
-    const chip = (key, label, n) => `<button class="date-chip${selectedDate===key?' active':''}" data-date="${esc(key)}">${esc(label)}<span class="n">${n}</span></button>`;
-    strip.innerHTML = chip('All dates', 'All dates', statusMatches.length)
-      + keys.map(k => chip(k, dateLabel(k), counts[k])).join('');
+  let dayCounts = {}, calMonth = null;
+  const pad2 = n => String(n).padStart(2, '0');
+
+  function updateDateTrigger(statusMatches) {
+    dayCounts = {};
+    statusMatches.forEach(m => { const k = dayKey(m.kickoff); if (k) dayCounts[k] = (dayCounts[k] || 0) + 1; });
+    // A date can vanish when the list refreshes; never strand the visitor.
+    if (selectedDate !== 'All dates' && !dayCounts[selectedDate]) selectedDate = 'All dates';
+    const label = document.getElementById('date-trigger-label');
+    if (label) label.textContent = selectedDate === 'All dates' ? 'All dates' : dateLabel(selectedDate);
+    const trigger = document.getElementById('date-trigger');
+    if (trigger) trigger.classList.toggle('on', selectedDate !== 'All dates');
   }
+
+  function renderCalendar() {
+    const cal = document.getElementById('calendar');
+    if (!cal) return;
+    const base = calMonth || new Date(dayKey(siteNow()) + 'T00:00:00');
+    const year = base.getFullYear(), month = base.getMonth();
+    const first = new Date(year, month, 1);
+    const lead = (first.getDay() + 6) % 7;              // Monday-first grid
+    const days = new Date(year, month + 1, 0).getDate();
+    const title = first.toLocaleDateString('en-GB', {month: 'long', year: 'numeric'});
+
+    let grid = ['Mo','Tu','We','Th','Fr','Sa','Su']
+      .map(d => `<span class="cal-dow">${d}</span>`).join('');
+    for (let i = 0; i < lead; i++) grid += '<span></span>';
+    for (let d = 1; d <= days; d++) {
+      const key = `${year}-${pad2(month + 1)}-${pad2(d)}`;
+      const n = dayCounts[key] || 0;
+      const cls = 'cal-day' + (n ? ' has' : '') + (selectedDate === key ? ' sel' : '');
+      // Only days that actually hold fixtures are selectable.
+      grid += `<button class="${cls}" data-cal-day="${key}"${n ? '' : ' disabled'}>${d}${n ? '<i class="dot"></i>' : ''}</button>`;
+    }
+
+    const withMatches = Object.keys(dayCounts).length;
+    cal.innerHTML = `<div class="cal-head">`
+      + `<button class="cal-nav" data-cal-nav="-1" aria-label="Previous month">&#8249;</button>`
+      + `<span class="cal-title">${esc(title)}</span>`
+      + `<button class="cal-nav" data-cal-nav="1" aria-label="Next month">&#8250;</button></div>`
+      + `<div class="cal-grid">${grid}</div>`
+      + `<div class="cal-foot"><span class="cal-count">${withMatches} date${withMatches === 1 ? '' : 's'} with fixtures</span>`
+      + `<button class="cal-clear" data-cal-clear>All dates</button></div>`;
+  }
+
+  function toggleCalendar(open) {
+    const cal = document.getElementById('calendar');
+    const trigger = document.getElementById('date-trigger');
+    if (!cal || !trigger) return;
+    if (open && !calMonth) {
+      calMonth = new Date((selectedDate !== 'All dates' ? selectedDate : dayKey(siteNow())) + 'T00:00:00');
+    }
+    cal.hidden = !open;
+    trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) renderCalendar();
+  }
+
+  function shiftMonth(delta) {
+    const base = calMonth || new Date(dayKey(siteNow()) + 'T00:00:00');
+    calMonth = new Date(base.getFullYear(), base.getMonth() + delta, 1);
+    renderCalendar();
+  }
+
   function render(){
     let q=search.trim().toLowerCase();
     const now=siteNow(), statusMatches=matches.filter(m=>inSelectedStatus(m,now));
     leagueButtons(statusMatches);
-    dateStrip(statusMatches);
+    updateDateTrigger(statusMatches);
     const filtered=statusMatches.filter(m=>(selectedDate==='All dates'||dayKey(m.kickoff)===selectedDate)&&(selectedLeague==='All leagues'||m.league===selectedLeague)&&(!q||`${m.home_team} ${m.away_team} ${m.league} ${m.prediction||''}`.toLowerCase().includes(q)));
     const html=leagues.map(l=>{const items=filtered.filter(m=>m.league===l.name);if(!items.length)return '';return `<section class="league-card"><div class="league-head"><div class="league-icon">${image(l)}</div><div><div class="league-title">${esc(l.league_name)}</div><div class="league-sub">${esc(l.country||'Football')} · Football</div></div><span class="league-num">${items.length} ${items.length===1?'match':'matches'}</span></div><div class="column-head"><span>Date & time</span><span>Match</span><span>Prediction</span><span>Odds</span><span>Score</span><span>Result</span></div>${items.map(m=>{let d=dateParts(m.kickoff);return `<div class="match-row"><div class="date"><strong>${esc(d.day)}</strong><br>${esc(d.time)}</div><div class="teams"><div class="team-line"><span class="team-badge">${esc((m.home_team || '?')[0])}</span>${esc(m.home_team)}</div><div class="team-line"><span class="team-badge">${esc((m.away_team || '?')[0])}</span>${esc(m.away_team)}</div></div><div class="prediction">${esc(m.prediction)}<small>${esc(tipText[m.prediction]||'')}</small></div><div class="odds"><b>${m.odds ? esc(fmtOdds(m.odds)) : '—'}</b><small>${m.odds ? (m.odds_source === 'Bookmaker' ? 'book' : 'est') : ''}</small></div><div class="score">${m.result_confirmed?`${esc(m.home_score)} : ${esc(m.away_score)}`:'— : —'}<small>${m.result_confirmed?'FULL TIME':esc(m.provider_status||'PENDING')}</small></div><div class="result">${badge(m)}<button class="details" data-id="${esc(m.name)}" aria-label="View ${esc(m.home_team)} versus ${esc(m.away_team)} details">›</button></div></div>`}).join('')}</section>`}).join('');
     document.getElementById('match-list').innerHTML=html||`<div class="empty">${selectedStatus==='finished'?'No confirmed results to show.':'No matching pending predictions to show.'}</div>`;
@@ -77,8 +126,8 @@
     render();
   }
   document.addEventListener('error',e=>{if(e.target.matches('[data-league-image]')&&e.target.src!==defaultImage)e.target.src=defaultImage},true);
-  document.addEventListener('click',e=>{const dateChip=e.target.closest('[data-date]');if(dateChip){selectedDate=dateChip.dataset.date;render()}const league=e.target.closest('[data-league]');if(league){selectedLeague=league.dataset.league;render()}const tab=e.target.closest('[data-status]');if(tab)setStatus(tab.dataset.status);const detail=e.target.closest('[data-id]');if(detail)details(detail.dataset.id);if(e.target.id==='close'||e.target.id==='modal')document.getElementById('modal').classList.remove('open')});
-  document.getElementById('search').addEventListener('input',e=>{search=e.target.value;render()});document.getElementById('predictions-link').addEventListener('click',()=>setStatus('all'));document.getElementById('results-link').addEventListener('click',()=>setStatus('finished'));document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('modal').classList.remove('open')});
+  document.addEventListener('click',e=>{const dateTrigger=e.target.closest('#date-trigger');if(dateTrigger){toggleCalendar(document.getElementById('calendar').hidden);return}const calNav=e.target.closest('[data-cal-nav]');if(calNav){shiftMonth(Number(calNav.dataset.calNav));return}const calDay=e.target.closest('[data-cal-day]');if(calDay){selectedDate=calDay.dataset.calDay;toggleCalendar(false);render();return}const calClear=e.target.closest('[data-cal-clear]');if(calClear){selectedDate='All dates';toggleCalendar(false);render();return}if(!e.target.closest('.date-picker'))toggleCalendar(false);const league=e.target.closest('[data-league]');if(league){selectedLeague=league.dataset.league;render()}const tab=e.target.closest('[data-status]');if(tab)setStatus(tab.dataset.status);const detail=e.target.closest('[data-id]');if(detail)details(detail.dataset.id);if(e.target.id==='close'||e.target.id==='modal')document.getElementById('modal').classList.remove('open')});
+  document.getElementById('search').addEventListener('input',e=>{search=e.target.value;render()});document.getElementById('predictions-link').addEventListener('click',()=>setStatus('all'));document.getElementById('results-link').addEventListener('click',()=>setStatus('finished'));document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.getElementById('modal').classList.remove('open');toggleCalendar(false)}});
   let loaded=false, loading=false;
   async function refreshMatches() {
     if (loading) return;
