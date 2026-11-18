@@ -108,10 +108,18 @@ def _run(settings):
         return (f"Fixture fetch failed: {_describe_error(error)}. "
                 f"horizon={horizon}h")
 
+    stop_reason = ""
+    if not upcoming:
+        stop_reason = "no fixtures in the look-ahead window"
+
     for fixture in upcoming:
         if created >= max_per_run:
+            stop_reason = f"run cap reached ({max_per_run}/run)"
             break
         if today_used + created >= config["max_per_day"]:
+            stop_reason = (f"daily cap reached "
+                           f"({today_used} already created today, "
+                           f"limit {config['max_per_day']})")
             break
 
         league = leagues.get(fixture["competition_code"])
@@ -150,7 +158,8 @@ def _run(settings):
                f"unconfigured {unconfigured}. "
                f"horizon={horizon}h band={min_confidence:.2f}-{max_confidence:.2f} "
                f"cap={max_per_run}/run,{config['max_per_day']}/day "
-               f"margin={margin:.2f}")
+               f"margin={margin:.2f}"
+               f" | stop: {stop_reason or 'all fixtures handled'}")
     if failed:
         summary += " | errors: " + "; ".join(failed)[:250]
     return summary
@@ -342,6 +351,10 @@ def diagnose():
     say(f"resolved config     : horizon={config['horizon_hours']}h "
         f"band={config['min_confidence']}-{config['max_confidence']} "
         f"cap={config['max_per_run']}/run")
+    used_today = _created_today()
+    say(f"agent picks today   : {used_today} of {config['max_per_day']} allowed"
+        + ("  <-- at the cap, nothing more will publish today"
+           if used_today >= config["max_per_day"] else ""))
     say()
 
     leagues = frappe.get_all(
