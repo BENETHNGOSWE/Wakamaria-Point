@@ -55,8 +55,12 @@ def probabilities(matrix):
                 out["X2"] += q
             if h != a:
                 out["12"] += q
+            if total > 1:
+                out["Over 1.5"] += q
             if total > 2:
                 out["Over 2.5"] += q
+            if total > 3:
+                out["Over 3.5"] += q
             if total < 3:
                 out["Under 2.5"] += q
             if total < 4:

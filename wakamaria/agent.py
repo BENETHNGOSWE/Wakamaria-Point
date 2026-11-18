@@ -88,6 +88,7 @@ def _run(settings):
 
     created = skipped = unconfigured = 0
     used_families = {}
+    used_tips = {}
     budget = {"fetches": 0}
     today_used = _created_today()
     failed = []
@@ -135,6 +136,7 @@ def _run(settings):
                 max_confidence=max_confidence,
                 family_cap=family_cap,
                 used_families=used_families,
+                used_tips=used_tips,
                 margin=margin,
             )
         except Exception as error:
@@ -166,7 +168,8 @@ def _run(settings):
 
 
 def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
-                     max_confidence, family_cap, used_families, margin):
+                     max_confidence, family_cap, used_families, used_tips,
+                     margin):
     """Create one published prediction, or return None if nothing was published."""
     if _already_known(league.name, fixture):
         return None
@@ -194,6 +197,7 @@ def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
         max_confidence=max_confidence,
         family_cap=family_cap,
         used_families=used_families,
+        used_tips=used_tips,
     )
     if not choice or not choice.get("odds"):
         return None
@@ -221,6 +225,7 @@ def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
     })
     doc.insert(ignore_permissions=True)
     used_families[choice["family"]] = used_families.get(choice["family"], 0) + 1
+    used_tips[choice["tip"]] = used_tips.get(choice["tip"], 0) + 1
     return doc.name
 
 

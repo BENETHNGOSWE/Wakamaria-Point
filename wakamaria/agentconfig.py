@@ -16,9 +16,9 @@ DEFAULTS = {
     "horizon_hours": 36,
     "max_per_run": 12,
     "max_per_day": 20,
-    "min_confidence": 0.45,
-    "max_confidence": 0.66,
-    "family_cap": 2,
+    "min_confidence": 0.35,
+    "max_confidence": 0.80,
+    "family_cap": 3,
     "margin": model.DEFAULT_MARGIN,
     "pause_after_losses": 0,
 }

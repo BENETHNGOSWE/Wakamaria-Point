@@ -30,6 +30,10 @@ class TestProbabilities(unittest.TestCase):
     def test_btts_is_complementary(self):
         self.assertAlmostEqual(self.p["BTTS Yes"] + self.p["BTTS No"], 1.0, delta=1e-5)   # grid truncates above 10 goals
 
+    def test_over_ladder_is_monotonic(self):
+        self.assertGreater(self.p["Over 1.5"], self.p["Over 2.5"])
+        self.assertGreater(self.p["Over 2.5"], self.p["Over 3.5"])
+
     def test_under_3_5_is_more_likely_than_under_2_5(self):
         self.assertGreater(self.p["Under 3.5"], self.p["Under 2.5"])
 

@@ -136,7 +136,11 @@ def _market_prices(event):
                     except (TypeError, ValueError):
                         continue
                     # Only the lines Wakamaria actually settles are usable.
-                    if point == 2.5 and name == "over":
+                    if point == 1.5 and name == "over":
+                        add("Over 1.5", price)
+                    elif point == 3.5 and name == "over":
+                        add("Over 3.5", price)
+                    elif point == 2.5 and name == "over":
                         add("Over 2.5", price)
                     elif point == 2.5 and name == "under":
                         add("Under 2.5", price)

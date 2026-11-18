@@ -46,14 +46,20 @@ class TestResolve(unittest.TestCase):
         self.assertEqual(config["max_per_run"], DEFAULTS["max_per_run"])
         self.assertEqual(config["min_confidence"], DEFAULTS["min_confidence"])
 
-    def test_resolved_band_produces_publishable_prices(self):
-        """The default band must stay in the 1.43-2.10 range the site expects."""
+    def test_resolved_band_spans_a_useful_range_of_prices(self):
+        """Visitors combine picks themselves, so a wide spread matters.
+
+        A narrow band collapsed the list onto three markets; the default now
+        reaches from ~1.18 up to ~2.70.
+        """
         from wakamaria.model import market_odds
         config = resolve({})
         shortest = market_odds(config["max_confidence"], config["margin"])
         longest = market_odds(config["min_confidence"], config["margin"])
-        self.assertGreater(shortest, 1.40)
-        self.assertLess(longest, 2.15)
+        self.assertGreater(shortest, 1.10)
+        self.assertLess(shortest, 1.30)
+        self.assertGreater(longest, 2.50)
+        self.assertGreater(config["max_confidence"], config["min_confidence"])
 
 
 if __name__ == "__main__":

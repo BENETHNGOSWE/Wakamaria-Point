@@ -9,7 +9,7 @@ def evaluate(tip, home, away):
     wins = {
         "1": home > away, "X": home == away, "2": away > home,
         "1X": home >= away, "X2": away >= home, "12": home != away,
-        "Over 2.5": home + away > 2, "Under 2.5": home + away < 3, "Under 3.5": home + away < 4,
+        "Over 1.5": home + away > 1, "Over 2.5": home + away > 2, "Over 3.5": home + away > 3, "Under 2.5": home + away < 3, "Under 3.5": home + away < 4,
         "BTTS Yes": home > 0 and away > 0, "BTTS No": home == 0 or away == 0,
     }
     return "Win" if wins[tip] else "Lose"

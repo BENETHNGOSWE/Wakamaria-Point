@@ -146,24 +146,25 @@
       "fieldname": "agent_min_confidence",
       "fieldtype": "Float",
       "label": "Minimum confidence",
-      "default": "0.45",
-      "description": "0.45 is roughly a 2.10 price.",
+      "default": "0.35",
+      "description": "Lower bound. 0.35 is roughly a 2.70 price.",
       "precision": "2"
     },
     {
       "fieldname": "agent_max_confidence",
       "fieldtype": "Float",
       "label": "Maximum confidence",
-      "default": "0.66",
-      "description": "0.66 is roughly a 1.43 price. Anything shorter is not worth publishing.",
+      "default": "0.80",
+      "description": "Upper bound. 0.80 is roughly a 1.18 price.",
       "precision": "2"
     },
     {
       "fieldname": "agent_family_cap",
       "fieldtype": "Int",
       "label": "Max picks per market family per run",
-      "default": "2",
-      "precision": "0"
+      "default": "3",
+      "precision": "0",
+      "description": "How many picks from one market family (1X2, totals, BTTS...) per run."
     },
     {
       "fieldname": "agent_margin",

@@ -71,6 +71,40 @@ class TestChoose(unittest.TestCase):
         self.assertEqual(choice["tip"], "Over 2.5")
         self.assertEqual(choice["source"], "Bookmaker")
 
+    def test_repeated_runs_do_not_concentrate_on_one_market(self):
+        """Identical probabilities must still produce a varied list.
+
+        Before usage-first ranking, twenty neutral fixtures published seven
+        copies of the same double chance and nothing else.
+        """
+        from collections import Counter
+        used_f, used_t, picks = {}, {}, []
+        for _ in range(40):
+            choice = choose(NEUTRAL, priced(NEUTRAL), min_confidence=0.35,
+                            max_confidence=0.80, family_cap=3,
+                            used_families=used_f, used_tips=used_t)
+            used_f[choice["family"]] = used_f.get(choice["family"], 0) + 1
+            used_t[choice["tip"]] = used_t.get(choice["tip"], 0) + 1
+            picks.append(choice)
+
+        counts = Counter(p["tip"] for p in picks)
+        self.assertGreaterEqual(len(counts), 8, f"only {len(counts)} distinct tips")
+        self.assertLessEqual(max(counts.values()) / len(picks), 0.25,
+                             f"one tip took {max(counts.values())}/40")
+
+    def test_prices_spread_across_the_band(self):
+        from collections import Counter
+        used_f, used_t, odds = {}, {}, []
+        for _ in range(20):
+            choice = choose(NEUTRAL, priced(NEUTRAL), min_confidence=0.35,
+                            max_confidence=0.80, family_cap=3,
+                            used_families=used_f, used_tips=used_t)
+            used_f[choice["family"]] = used_f.get(choice["family"], 0) + 1
+            used_t[choice["tip"]] = used_t.get(choice["tip"], 0) + 1
+            odds.append(choice["odds"])
+        self.assertLess(min(odds), 1.45)
+        self.assertGreater(max(odds), 2.0)
+
     def test_source_is_carried_through(self):
         probabilities = {"Over 2.5": 0.55, "Under 2.5": 0.45}
         prices = {"Over 2.5": (1.95, "Bookmaker"), "Under 2.5": (1.95, "Model")}
