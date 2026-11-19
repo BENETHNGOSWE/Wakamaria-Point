@@ -198,6 +198,29 @@
       "label": "the-odds-api Key"
     },
     {
+      "fieldname": "apifootball_section",
+      "fieldtype": "Section Break",
+      "label": "Second Fixture Source (API-Football)"
+    },
+    {
+      "fieldname": "apifootball_enabled",
+      "fieldtype": "Check",
+      "label": "Also fetch fixtures from API-Football",
+      "description": "Adds competitions football-data.org does not carry. Fixtures already covered by the main provider are never duplicated."
+    },
+    {
+      "fieldname": "apifootball_key",
+      "fieldtype": "Password",
+      "label": "API-Football Key"
+    },
+    {
+      "fieldname": "apifootball_base",
+      "fieldtype": "Data",
+      "label": "API-Football Base URL",
+      "default": "https://v3.football.api-sports.io",
+      "description": "Change only if you bought through RapidAPI; then use its v3 base URL."
+    },
+    {
       "fieldname": "agent_last_run",
       "fieldtype": "Datetime",
       "label": "Agent Last Run"

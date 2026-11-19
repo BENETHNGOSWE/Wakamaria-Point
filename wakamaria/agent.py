@@ -24,7 +24,7 @@ from datetime import timezone
 import frappe
 from frappe.utils import convert_utc_to_system_timezone, now_datetime
 
-from wakamaria import ownership
+from wakamaria import apisports, ownership, sources
 
 from wakamaria import fixtures as fixture_rules
 from wakamaria import model, odds
@@ -68,14 +68,36 @@ def _to_local(aware):
 
 
 def _all_fixtures(horizon, stats=None):
-    """Every predictable fixture in the look-ahead, in one provider request."""
+    """Every predictable fixture in the look-ahead, across every source enabled.
+
+    The main provider is one request for all its competitions. A second source
+    is optional: it is merged in and de-duplicated by team names and day, so it
+    can only add fixtures, never re-publish ones already covered.
+    """
     now = now_datetime()
     date_from, date_to = fixture_rules.window(now, horizon)
     data = api_get("/matches", {"dateFrom": str(date_from), "dateTo": str(date_to)})
-    selected, counters = fixture_rules.select(
-        data.get("matches"), now, horizon, to_local=_to_local)
+    primary = data.get("matches") or []
+
+    secondary = []
+    settings = frappe.get_single("Wakamaria Settings")
+    if settings.get("apifootball_enabled"):
+        key = settings.get_password("apifootball_key", raise_exception=False)
+        if key:
+            try:
+                secondary = apisports.fetch(
+                    key, date_from, date_to,
+                    base=settings.get("apifootball_base"))
+            except Exception as error:
+                # A dead second source must never take the run down.
+                frappe.log_error(title="Wakamaria: second source failed",
+                                 message=_describe_error(error))
+
+    merged, added = sources.merge(primary, secondary)
+    selected, counters = fixture_rules.select(merged, now, horizon, to_local=_to_local)
     if stats is not None:
         stats.update(counters)
+        stats["from_second_source"] = added
     return selected
 
 
@@ -95,14 +117,24 @@ def _run(settings):
     today_used = _created_today()
     failed = []
 
-    leagues = {
-        str(league.provider_code).upper(): league
-        for league in frappe.get_all(
-            "Wakamaria League",
-            filters={"enabled": 1, "provider_code": ["is", "set"]},
-            fields=["name", "league_name", "provider_code"],
-        )
+    # A League can be reached two ways: by the main provider's competition code,
+    # or — for fixtures from a second source, which has its own ids — by its
+    # name, ideally with the country to disambiguate "Serie A".
+    rows = frappe.get_all(
+        "Wakamaria League", filters={"enabled": 1},
+        fields=["name", "league_name", "country", "provider_code"],
+    )
+    leagues = {str(row.provider_code).upper(): row for row in rows if row.provider_code}
+    by_country = {
+        ((row.country or "").casefold(), (row.league_name or "").casefold()): row
+        for row in rows
     }
+    name_counts = {}
+    for row in rows:
+        key = (row.league_name or "").casefold()
+        name_counts[key] = name_counts.get(key, 0) + 1
+    by_name = {(row.league_name or "").casefold(): row for row in rows
+               if name_counts[(row.league_name or "").casefold()] == 1}
 
     try:
         upcoming = _all_fixtures(horizon)
@@ -124,7 +156,10 @@ def _run(settings):
                            f"limit {config['max_per_day']})")
             break
 
-        league = leagues.get(fixture["competition_code"])
+        league = (leagues.get(fixture["competition_code"])
+                  or by_country.get(((fixture.get("source_country") or "").casefold(),
+                                     (fixture.get("competition_name") or "").casefold()))
+                  or by_name.get((fixture.get("competition_name") or "").casefold()))
         if not league:
             # The competition has fixtures but no enabled League record. The
             # diagnostic names these so the operator can add them.
