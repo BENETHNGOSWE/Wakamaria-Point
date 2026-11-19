@@ -24,6 +24,8 @@ from datetime import timezone
 import frappe
 from frappe.utils import convert_utc_to_system_timezone, now_datetime
 
+from wakamaria import ownership
+
 from wakamaria import fixtures as fixture_rules
 from wakamaria import model, odds
 from wakamaria.agentconfig import resolve as resolve_config
@@ -86,7 +88,7 @@ def _run(settings):
     family_cap = config["family_cap"]
     margin = config["margin"]
 
-    created = skipped = unconfigured = 0
+    created = skipped = unconfigured = adopted = 0
     used_families = {}
     used_tips = {}
     budget = {"fetches": 0}
@@ -151,12 +153,16 @@ def _run(settings):
 
         if published:
             created += 1
+            if published.get("adopted"):
+                adopted += 1
         else:
             skipped += 1
 
     frappe.db.commit()
     summary = (f"Created {created} prediction(s), skipped {skipped}, "
-               f"unconfigured {unconfigured}. "
+               f"unconfigured {unconfigured}"
+               + (f", adopted {adopted} hand-entered row(s)" if adopted else "")
+               + ". "
                f"horizon={horizon}h band={min_confidence:.2f}-{max_confidence:.2f} "
                f"cap={max_per_run}/run,{config['max_per_day']}/day,"
                f"{today_used} already today "
@@ -170,8 +176,15 @@ def _run(settings):
 def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
                      max_confidence, family_cap, used_families, used_tips,
                      margin):
-    """Create one published prediction, or return None if nothing was published."""
-    if _already_known(league.name, fixture):
+    """Publish the agent's prediction for one fixture.
+
+    Returns {"name", "adopted"} or None when there is nothing to publish.
+    A hand-entered row is *adopted*, not duplicated: its prediction is replaced
+    and it gains a provider id, which is what finally lets its result settle.
+    Two rows for one fixture is the bug this prevents.
+    """
+    action = ownership.decide(_existing_row(league, fixture))
+    if action == "skip":
         return None
 
     home_history = _history(fixture["home_id"], budget)
@@ -202,8 +215,7 @@ def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
     if not choice or not choice.get("odds"):
         return None
 
-    doc = frappe.get_doc({
-        "doctype": "Wakamaria Match",
+    fields = {
         "league": league.name,
         "home_team": fixture["home_name"],
         "away_team": fixture["away_name"],
@@ -222,23 +234,41 @@ def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
                   f"/{prediction['away_lambda']:.2f}, "
                   f"p={choice['confidence']:.3f}, price={choice['odds']}"
                   f" ({choice['source']})"),
-    })
-    doc.insert(ignore_permissions=True)
+    }
+
+    if action == "adopt":
+        row = _existing_row(league, fixture)
+        doc = frappe.get_doc("Wakamaria Match", row["name"])
+        doc.update(fields)
+        doc.save(ignore_permissions=True)
+    else:
+        doc = frappe.get_doc({"doctype": "Wakamaria Match", **fields})
+        doc.insert(ignore_permissions=True)
     used_families[choice["family"]] = used_families.get(choice["family"], 0) + 1
     used_tips[choice["tip"]] = used_tips.get(choice["tip"], 0) + 1
-    return doc.name
+    return {"name": doc.name, "adopted": action == "adopt"}
 
 
-def _already_known(league, fixture):
-    """Three ways a fixture can already be on the site. All of them block."""
-    if frappe.db.exists("Wakamaria Match", {"provider_match_id": fixture["id"]}):
-        return True
-    return bool(frappe.db.exists("Wakamaria Match", {
-        "league": league,
+def _existing_row(league, fixture):
+    """The row already on the site for this fixture, as a dict, or None.
+
+    Two identities are checked because the site holds two kinds of row: ones the
+    agent created (provider id present) and ones typed or imported by hand (no
+    provider id, matched loosely on league, teams and kickoff).
+    """
+    fields = ["name", "provider_match_id", "predicted_by"]
+
+    linked = frappe.db.get_value(
+        "Wakamaria Match", {"provider_match_id": fixture["id"]}, fields, as_dict=True)
+    if linked:
+        return linked
+
+    return frappe.db.get_value("Wakamaria Match", {
+        "league": league.name,
         "home_team": fixture["home_name"],
         "away_team": fixture["away_name"],
         "kickoff": fixture["kickoff"],
-    }))
+    }, fields, as_dict=True)
 
 
 def _history(team_id, budget):

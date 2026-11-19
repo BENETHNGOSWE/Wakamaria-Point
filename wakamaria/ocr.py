@@ -7,6 +7,7 @@ from pathlib import Path
 from PIL import UnidentifiedImageError
 import frappe
 from frappe import _
+from wakamaria import ownership
 from wakamaria.card_ocr import extract_cards, parse_tip, parse_teams, MAX_CARDS, TIPS
 from wakamaria.image_processing import prepare_for_ocr
 
@@ -110,6 +111,8 @@ def create_drafts(name):
     rows=[r for r in doc.review_rows if r.select_for_import and not r.imported_match]
     if not rows: frappe.throw(_('Select at least one unimported review row.'))
     seen = set()
+    to_import=[]
+    skipped=[]
     for row in rows:
         if not all((row.league,row.home_team,row.away_team,row.kickoff,row.prediction)):
             frappe.throw(_('Row {0}: complete league, both teams, kickoff and prediction before importing.').format(row.idx))
@@ -122,12 +125,30 @@ def create_drafts(name):
         if key in seen:
             frappe.throw(_('Row {0}: duplicates another selected review row.').format(row.idx))
         seen.add(key)
-        if frappe.db.exists('Wakamaria Match',filters):
+        existing=frappe.db.get_value('Wakamaria Match',filters,
+                                     ['name','provider_match_id','predicted_by'],as_dict=True)
+        action=ownership.upload_decision(existing)
+        if action=='skip':
+            # The agent already predicted this fixture, and only its pick can
+            # settle. Leave the agent's row alone instead of failing the import.
+            skipped.append(row.idx)
+            continue
+        if action=='block':
             frappe.throw(_('Row {0}: a match with the same league, teams and kickoff already exists.').format(row.idx))
-    created=[]
+        to_import.append(row)
+    if not to_import:
+        frappe.throw(_('Every selected row is already predicted by the agent, so there is nothing to import.'))
+    created=[];rows=to_import
     for row in rows:
+        # Published, not a draft: the site only lists published rows, so a
+        # draft here would be invisible and the upload pointless. No price is
+        # read off the card, so the odds stay empty and the site shows a dash.
         match=frappe.get_doc({'doctype':'Wakamaria Match','league':row.league,'home_team':row.home_team.strip(),
-                              'away_team':row.away_team.strip(),'kickoff':row.kickoff,'prediction':row.prediction,'published':0})
+                              'away_team':row.away_team.strip(),'kickoff':row.kickoff,'prediction':row.prediction,
+                              'odds_source':'Manual','published':1})
         match.insert();row.imported_match=match.name;row.select_for_import=0;created.append(match.name)
     doc.save()
+    if skipped:
+        frappe.msgprint(_('Skipped row(s) {0}: the agent already predicted those fixtures.').format(
+            ', '.join(str(i) for i in skipped)))
     return created
