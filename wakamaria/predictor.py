@@ -19,6 +19,11 @@ from wakamaria.tips import TIPS, family
 
 MIN_CONFIDENCE_FLOOR = 0.30
 
+# A tip may not be more than this far below the fixture's single most likely
+# market. Variety is worth having; "Real Madrid to not win at home" is not a
+# matter of taste and must be impossible to publish.
+COHERENCE_GAP = 0.12
+
 
 def _rank_key(tip, probability, prices, used_tips):
     """Rank a candidate. Higher is better.
@@ -63,8 +68,7 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
         return entry if entry and entry[0] and entry[0] > 1.0 else None
 
     def pick(lo, hi, cap):
-        best = None
-        best_key = None
+        candidates = []
         for tip in TIPS:
             probability = probabilities.get(tip)
             if probability is None or not (lo <= probability <= hi):
@@ -73,10 +77,17 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
                 continue
             if cap is not None and used_families.get(family(tip), 0) >= cap:
                 continue
-            key = _rank_key(tip, probability, prices, used_tips)
-            if best_key is None or key > best_key:
-                best, best_key = tip, key
-        return best
+            candidates.append((tip, probability))
+        if not candidates:
+            return None
+
+        # Coherence: a tip must be close to the fixture's best market. Rotation
+        # spreads the run across markets, but it must never manufacture a tip
+        # the match itself argues against.
+        top = max(p for _, p in candidates)
+        candidates = [(t, p) for t, p in candidates if p >= top - COHERENCE_GAP]
+        return max((t for t, _ in candidates),
+                   key=lambda t: _rank_key(t, probabilities[t], prices, used_tips))
 
     for lo, hi, cap in (
         (floor, max_confidence, family_cap),

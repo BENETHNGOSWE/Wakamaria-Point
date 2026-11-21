@@ -133,13 +133,21 @@ def expected_goals(home_rates, away_rates, league_avg=DEFAULT_LEAGUE_AVG,
 
 
 def predict(home_entries, away_entries, *, home_id=None, home_name=None,
-            away_id=None, away_name=None, league_avg=DEFAULT_LEAGUE_AVG):
+            away_id=None, away_name=None, league_avg=DEFAULT_LEAGUE_AVG,
+            home_strength=None, away_strength=None):
     """Full prediction for one fixture.
 
     Returns {"probabilities": {...}, "home_lambda": float, "away_lambda": float}.
+
+    `home_strength` / `away_strength` are (attack, defence) multipliers taken
+    from the league table, used only when a side has no recent results. Without
+    them a team with an empty cache is indistinguishable from every other team,
+    which is how Real Madrid at home ended up tipped to "draw or lose".
     """
-    home_rates = team_rates(home_entries, home_id, home_name, league_avg)
-    away_rates = team_rates(away_entries, away_id, away_name, league_avg)
+    home_rates = (team_rates(home_entries, home_id, home_name, league_avg)
+                  if home_entries else (home_strength or (1.0, 1.0)))
+    away_rates = (team_rates(away_entries, away_id, away_name, league_avg)
+                  if away_entries else (away_strength or (1.0, 1.0)))
     home_lambda, away_lambda = expected_goals(home_rates, away_rates, league_avg)
     return {
         "probabilities": probabilities(score_matrix(home_lambda, away_lambda)),

@@ -88,9 +88,34 @@ class TestChoose(unittest.TestCase):
             picks.append(choice)
 
         counts = Counter(p["tip"] for p in picks)
-        self.assertGreaterEqual(len(counts), 8, f"only {len(counts)} distinct tips")
-        self.assertLessEqual(max(counts.values()) / len(picks), 0.25,
+        # Coherence narrows the pool — a tip must sit within COHERENCE_GAP of the
+        # fixture's best market — so this is variety *within what the match
+        # allows*, not variety at any cost.
+        self.assertGreaterEqual(len(counts), 6, f"only {len(counts)} distinct tips")
+        self.assertLessEqual(max(counts.values()) / len(picks), 0.30,
                              f"one tip took {max(counts.values())}/40")
+
+    def test_a_tip_must_be_close_to_the_best_market(self):
+        """Regression: Real Madrid at home was published as "draw or away win".
+
+        The model had no table data, treated both sides as average (P(home)
+        0.43, P(X2) 0.57) and the rotation published the nonsense. With the
+        table it knows better, and coherence makes the nonsense unpublishable
+        even if it did not.
+        """
+        from wakamaria.model import predict, market_odds
+        from wakamaria.predictor import COHERENCE_GAP
+
+        probs = predict([], [], home_strength=(1.80, 0.64),
+                        away_strength=(0.87, 1.16))["probabilities"]
+        prices = {t: (market_odds(q, 0.06), "Model") for t, q in probs.items()}
+        choice = choose(probs, prices, min_confidence=0.35, max_confidence=0.80,
+                        family_cap=3, used_families={}, used_tips={})
+
+        in_band = [p for p in probs.values() if 0.35 <= p <= 0.80]
+        self.assertGreaterEqual(probs[choice["tip"]], max(in_band) - COHERENCE_GAP - 1e-9)
+        self.assertNotEqual(choice["tip"], "X2")
+        self.assertGreater(probs["1"], 0.75, "a table must make Madrid a strong favourite")
 
     def test_prices_spread_across_the_band(self):
         from collections import Counter

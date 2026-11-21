@@ -24,7 +24,7 @@ from datetime import timezone
 import frappe
 from frappe.utils import convert_utc_to_system_timezone, now_datetime
 
-from wakamaria import apisports, ownership, sources
+from wakamaria import apisports, ownership, sources, standings
 
 from wakamaria import fixtures as fixture_rules
 from wakamaria import model, odds
@@ -142,6 +142,8 @@ def _run(settings):
         return (f"Fixture fetch failed: {_describe_error(error)}. "
                 f"horizon={horizon}h")
 
+    strengths = _team_strengths(leagues, upcoming)
+
     stop_reason = ""
     if not upcoming:
         stop_reason = "no fixtures in the look-ahead window"
@@ -174,6 +176,7 @@ def _run(settings):
                 family_cap=family_cap,
                 used_families=used_families,
                 used_tips=used_tips,
+                strengths=strengths,
                 margin=margin,
             )
         except Exception as error:
@@ -210,7 +213,7 @@ def _run(settings):
 
 def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
                      max_confidence, family_cap, used_families, used_tips,
-                     margin):
+                     strengths, margin):
     """Publish the agent's prediction for one fixture.
 
     Returns {"name", "adopted"} or None when there is nothing to publish.
@@ -229,6 +232,8 @@ def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
         home_history, away_history,
         home_id=fixture["home_id"], home_name=fixture["home_name"],
         away_id=fixture["away_id"], away_name=fixture["away_name"],
+        home_strength=(strengths or {}).get(fixture["home_id"]),
+        away_strength=(strengths or {}).get(fixture["away_id"]),
     )
 
     prices = odds.resolve(
@@ -304,6 +309,29 @@ def _existing_row(league, fixture):
         "away_team": fixture["away_name"],
         "kickoff": fixture["kickoff"],
     }, fields, as_dict=True)
+
+
+def _team_strengths(leagues, fixtures):
+    """League-table strength for every competition that has a fixture.
+
+    One request per competition covers every team in it, which is far cheaper
+    than fetching each team's results one at a time. Cached for six hours, so
+    only the first run after a new matchday pays the rate-limit cost.
+    """
+    cache = frappe.cache()
+    strengths = {}
+    codes = sorted({str(f["competition_code"]) for f in fixtures})
+    uncached_seen = False
+    for code in codes:
+        if code not in leagues:
+            continue
+        cached = cache.get_value(standings.CACHE_PREFIX + code.upper())
+        if cached is None:
+            if uncached_seen:
+                time.sleep(PROVIDER_PAUSE)
+            uncached_seen = True
+        strengths.update(standings.fetch(api_get, code, cache=cache))
+    return strengths
 
 
 def _history(team_id, budget):
