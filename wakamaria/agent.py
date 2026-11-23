@@ -251,6 +251,7 @@ def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
         family_cap=family_cap,
         used_families=used_families,
         used_tips=used_tips,
+        mode="accuracy",
     )
     if not choice or not choice.get("odds"):
         return None

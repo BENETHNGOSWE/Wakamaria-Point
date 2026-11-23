@@ -33,6 +33,20 @@ class TestProbabilities(unittest.TestCase):
     def test_over_ladder_is_monotonic(self):
         self.assertGreater(self.p["Over 1.5"], self.p["Over 2.5"])
         self.assertGreater(self.p["Over 2.5"], self.p["Over 3.5"])
+        self.assertGreater(self.p["Over 3.5"], self.p["Over 4.5"])
+
+    def test_under_lines_are_monotonic(self):
+        self.assertLess(self.p["Under 1.5"], self.p["Under 2.5"])
+        self.assertLess(self.p["Under 2.5"], self.p["Under 3.5"])
+
+    def test_team_totals_sit_inside_the_match_total(self):
+        # A side scoring 2+ cannot exceed the chance of 2+ goals in the match.
+        self.assertLess(self.p["Home Over 1.5"], self.p["Over 1.5"])
+        self.assertLess(self.p["Away Over 1.5"], self.p["Over 1.5"])
+
+    def test_win_and_btts_is_below_either_part(self):
+        self.assertLess(self.p["1 & BTTS Yes"], self.p["BTTS Yes"])
+        self.assertLess(self.p["1 & BTTS Yes"], self.p["1"])
 
     def test_under_3_5_is_more_likely_than_under_2_5(self):
         self.assertGreater(self.p["Under 3.5"], self.p["Under 2.5"])

@@ -61,12 +61,22 @@ def probabilities(matrix):
                 out["Over 2.5"] += q
             if total > 3:
                 out["Over 3.5"] += q
+            if total > 4:
+                out["Over 4.5"] += q
+            if total < 2:
+                out["Under 1.5"] += q
             if total < 3:
                 out["Under 2.5"] += q
             if total < 4:
                 out["Under 3.5"] += q
+            if h > 1:
+                out["Home Over 1.5"] += q
+            if a > 1:
+                out["Away Over 1.5"] += q
             if h > 0 and a > 0:
                 out["BTTS Yes"] += q
+            if h > a and h > 0 and a > 0:
+                out["1 & BTTS Yes"] += q
             if h == 0 or a == 0:
                 out["BTTS No"] += q
     return out

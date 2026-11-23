@@ -69,7 +69,7 @@
       "fieldname": "prediction",
       "label": "Prediction",
       "fieldtype": "Select",
-      "options": "1\nX\n2\n1X\nX2\n12\nOver 1.5\nOver 2.5\nOver 3.5\nUnder 2.5\nUnder 3.5\nBTTS Yes\nBTTS No",
+      "options": "1\nX\n2\n1X\nX2\n12\nOver 1.5\nOver 2.5\nOver 3.5\nOver 4.5\nUnder 1.5\nUnder 2.5\nUnder 3.5\nBTTS Yes\nBTTS No\nHome Over 1.5\nAway Over 1.5\n1 & BTTS Yes",
       "reqd": 1,
       "in_list_view": 1
     },

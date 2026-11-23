@@ -140,6 +140,10 @@ def _market_prices(event):
                         add("Over 1.5", price)
                     elif point == 3.5 and name == "over":
                         add("Over 3.5", price)
+                    elif point == 4.5 and name == "over":
+                        add("Over 4.5", price)
+                    elif point == 1.5 and name == "under":
+                        add("Under 1.5", price)
                     elif point == 2.5 and name == "over":
                         add("Over 2.5", price)
                     elif point == 2.5 and name == "under":

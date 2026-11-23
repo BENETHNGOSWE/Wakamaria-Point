@@ -44,10 +44,10 @@ class TestChoose(unittest.TestCase):
         probabilities["Under 3.5"] = 0.80
         probabilities["1X"] = 0.78
         first = choose(probabilities, priced(probabilities), family_cap=2,
-                       used_families={})
+                       used_families={}, mode="balanced")
         used = {first["family"]: 2}
         second = choose(probabilities, priced(probabilities), family_cap=2,
-                        used_families=used)
+                        used_families=used, mode="balanced")
         self.assertNotEqual(family(second["tip"]), first["family"])
 
     def test_never_returns_nothing_when_prices_exist(self):
@@ -82,7 +82,8 @@ class TestChoose(unittest.TestCase):
         for _ in range(40):
             choice = choose(NEUTRAL, priced(NEUTRAL), min_confidence=0.35,
                             max_confidence=0.80, family_cap=3,
-                            used_families=used_f, used_tips=used_t)
+                            used_families=used_f, used_tips=used_t,
+                            mode="balanced")
             used_f[choice["family"]] = used_f.get(choice["family"], 0) + 1
             used_t[choice["tip"]] = used_t.get(choice["tip"], 0) + 1
             picks.append(choice)
@@ -123,7 +124,8 @@ class TestChoose(unittest.TestCase):
         for _ in range(20):
             choice = choose(NEUTRAL, priced(NEUTRAL), min_confidence=0.35,
                             max_confidence=0.80, family_cap=3,
-                            used_families=used_f, used_tips=used_t)
+                            used_families=used_f, used_tips=used_t,
+                            mode="balanced")
             used_f[choice["family"]] = used_f.get(choice["family"], 0) + 1
             used_t[choice["tip"]] = used_t.get(choice["tip"], 0) + 1
             odds.append(choice["odds"])

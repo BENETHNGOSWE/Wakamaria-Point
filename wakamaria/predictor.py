@@ -47,8 +47,8 @@ def _rank_key(tip, probability, prices, used_tips):
 
 
 def choose(probabilities, prices=None, *, min_confidence=0.35,
-           max_confidence=0.80, family_cap=3, used_families=None,
-           used_tips=None):
+           max_confidence=0.90, family_cap=3, used_families=None,
+           used_tips=None, mode="accuracy"):
     """Return {"tip", "confidence", "odds", "source", "family"} or None.
 
     Degrades in stages rather than ever returning nothing:
@@ -88,6 +88,24 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
         candidates = [(t, p) for t, p in candidates if p >= top - COHERENCE_GAP]
         return max((t for t, _ in candidates),
                    key=lambda t: _rank_key(t, probabilities[t], prices, used_tips))
+
+    if mode == "accuracy":
+        # The most likely market we can price. Usage breaks exact ties only, so
+        # two identical fixtures do not produce two identical rows.
+        for lo, hi in ((floor, max_confidence), (floor, 1.0), (0.0, 1.0)):
+            best = None
+            for tip in TIPS:
+                probability = probabilities.get(tip)
+                if probability is None or not (lo <= probability <= hi):
+                    continue
+                if not priced(tip):
+                    continue
+                key = (probability, -used_tips.get(tip, 0))
+                if best is None or key > best[0]:
+                    best = (key, tip)
+            if best:
+                return _describe(best[1], probabilities, prices)
+        return None
 
     for lo, hi, cap in (
         (floor, max_confidence, family_cap),

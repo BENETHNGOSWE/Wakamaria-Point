@@ -18,10 +18,15 @@ LABELS = {
     "Over 1.5": "2 or more goals",
     "Over 2.5": "3 or more goals",
     "Over 3.5": "4 or more goals",
+    "Over 4.5": "5 or more goals",
+    "Under 1.5": "0 or 1 goal",
     "Under 2.5": "Fewer than 3 goals",
     "Under 3.5": "Fewer than 4 goals",
     "BTTS Yes": "Both teams score",
     "BTTS No": "At least one team does not score",
+    "Home Over 1.5": "Home team scores 2 or more",
+    "Away Over 1.5": "Away team scores 2 or more",
+    "1 & BTTS Yes": "Home win and both teams score",
 }
 
 # Grouping used by the agent so one day's list is not six variations of the
@@ -37,9 +42,14 @@ FAMILIES = {
     "Over 2.5": "Total goals",
     "Over 3.5": "Total goals",
     "Under 2.5": "Total goals",
+    "Over 4.5": "Total goals",
+    "Under 1.5": "Total goals",
     "Under 3.5": "Total goals",
     "BTTS Yes": "Both teams to score",
     "BTTS No": "Both teams to score",
+    "Home Over 1.5": "Team goals",
+    "Away Over 1.5": "Team goals",
+    "1 & BTTS Yes": "Win and goals",
 }
 
 TIPS = tuple(LABELS)

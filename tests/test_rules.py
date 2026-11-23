@@ -13,6 +13,25 @@ class RulesTest(unittest.TestCase):
         self.assertEqual(evaluate("Under 3.5", 2, 1), "Win")
         self.assertEqual(evaluate("Under 3.5", 2, 2), "Lose")
 
+    def test_team_goals(self):
+        self.assertEqual(evaluate("Home Over 1.5", 2, 0), "Win")
+        self.assertEqual(evaluate("Home Over 1.5", 1, 3), "Lose")
+        self.assertEqual(evaluate("Away Over 1.5", 0, 2), "Win")
+        self.assertEqual(evaluate("Away Over 1.5", 2, 1), "Lose")
+
+    def test_win_and_both_score(self):
+        self.assertEqual(evaluate("1 & BTTS Yes", 2, 1), "Win")
+        self.assertEqual(evaluate("1 & BTTS Yes", 2, 0), "Lose")   # no away goal
+        self.assertEqual(evaluate("1 & BTTS Yes", 1, 1), "Lose")   # not a win
+        self.assertEqual(evaluate("1 & BTTS Yes", 0, 2), "Lose")
+
+    def test_wide_goal_lines(self):
+        self.assertEqual(evaluate("Over 4.5", 4, 1), "Win")
+        self.assertEqual(evaluate("Over 4.5", 4, 0), "Lose")
+        self.assertEqual(evaluate("Under 1.5", 1, 0), "Win")
+        self.assertEqual(evaluate("Under 1.5", 1, 1), "Lose")
+        self.assertEqual(evaluate("Under 1.5", 0, 0), "Win")
+
     def test_over_ladder(self):
         self.assertEqual(evaluate("Over 1.5", 1, 0), "Lose")
         self.assertEqual(evaluate("Over 1.5", 1, 1), "Win")
