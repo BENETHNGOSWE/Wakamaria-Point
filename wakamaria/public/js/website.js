@@ -3,6 +3,7 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   let leagues=[], matches=[], selectedLeague='All leagues', selectedStatus='all', selectedDate='All dates', search='', siteTimezone='';
   const tipText={'1':'Home win','X':'Draw','2':'Away win','1X':'Home win or draw','X2':'Draw or away win','12':'Either team wins','Over 1.5':'2 or more goals','Over 2.5':'3 or more goals','Over 3.5':'4 or more goals','Over 4.5':'5 or more goals','Under 1.5':'0 or 1 goal','Under 2.5':'Fewer than 3 goals','Under 3.5':'Fewer than 4 goals','BTTS Yes':'Both teams score','BTTS No':'At least one team does not score','Home Over 1.5':'Home team scores 2 or more','Away Over 1.5':'Away team scores 2 or more','1 & BTTS Yes':'Home win and both teams score'}
+  const fmtOdds = v => { const n = Number(v); return Number.isFinite(n) && n > 0 ? n.toFixed(2) : '—'; };
   const dateParts = input => { const [day='',time=''] = String(input||'').split(/[ T]/); return {day,time:time.slice(0,5)}; };
   const safeImage = path => typeof path==='string' && /^\/(files|assets)\//.test(path) ? path : defaultImage;
   const image = l => `<img src="${esc(safeImage(l.league_image))}" alt="" data-league-image>`;
