@@ -19,15 +19,23 @@ Pure: takes a payload, returns a dict. No Frappe, no network.
 
 CACHE_PREFIX = "wakamaria:standings:"
 MIN_GAMES = 3.0          # fewer than this and the table means nothing yet
+SHRINKAGE = 5.0          # pseudo-matches pulling a short table back to the mean
 
 
-def _rates(goals_for, goals_against, played, league_avg):
-    """(attack, defence) multipliers, 1.0 being an average side."""
+def _rates(goals_for, goals_against, played, league_avg, shrinkage=SHRINKAGE):
+    """(attack, defence) multipliers, 1.0 being an average side.
+
+    Shrunk toward the mean with exactly the arithmetic `model.team_rates` uses
+    for recent results. Dividing raw goals by games played — as this did — gives
+    a Champions League side with 10 goals in 4 matches an attack rating of 1.89
+    with nothing to hold it back. Two such sides meet and the model expects
+    eight goals, which is how a page ends up claiming 93% for "2 or more goals".
+    """
     per_team = league_avg / 2.0
     if per_team <= 0 or played < MIN_GAMES:
         return None
-    attack = (goals_for / played) / per_team
-    defence = (goals_against / played) / per_team
+    attack = (goals_for + per_team * shrinkage) / ((played + shrinkage) * per_team)
+    defence = (goals_against + per_team * shrinkage) / ((played + shrinkage) * per_team)
     # Keep an early-season outlier from producing an absurd favourite.
     return (min(max(attack, 0.40), 2.60), min(max(defence, 0.40), 2.60))
 

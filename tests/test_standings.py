@@ -61,8 +61,27 @@ class TestEffectOnPrediction(unittest.TestCase):
         strengths = standings.team_strengths(PAYLOAD)
         probs = model.predict([], [], home_strength=strengths["86"],
                               away_strength=strengths["558"])["probabilities"]
-        self.assertGreater(probs["1"], 0.75)
-        self.assertLess(probs["X2"], 0.20)
+        # Shrunk toward the mean, so the edge is real but not cartoonish.
+        self.assertGreater(probs["1"], 0.70)
+        self.assertLess(probs["X2"], 0.28)
+
+    def test_a_short_table_cannot_invent_a_goal_festival(self):
+        """Regression: a Champions League side on 4 games was rated 1.89 attack.
+
+        Raw goals-per-game has no memory of how few games it is based on. Two
+        sides rated that way met, the model expected eight goals, and the site
+        published "Over 1.5" at 1.07 — a 93% claim for something that happens
+        75% of the time.
+        """
+        raw = (10 / 4) / (2.65 / 2)
+        shrunk, _ = standings._rates(10, 2, 4, 2.65)
+        self.assertAlmostEqual(raw, 1.89, places=2)
+        self.assertLess(shrunk, 1.45, "a 4-game table must be pulled toward the mean")
+
+    def test_more_games_trust_the_table_more(self):
+        short, _ = standings._rates(20, 4, 6, 2.65)
+        long, _ = standings._rates(20 * 4, 4 * 4, 24, 2.65)
+        self.assertLess(short, long)
 
     def test_without_a_table_every_fixture_looks_the_same(self):
         """The bug: no history and no table means 'two average teams'."""
