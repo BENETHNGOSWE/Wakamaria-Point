@@ -102,25 +102,56 @@ class TestChoose(unittest.TestCase):
         # allows*, not variety at any cost. "12" is now banned, which removes
         # one of the previously available tips and takes the ceiling with it.
         self.assertGreaterEqual(len(counts), 3, f"only {len(counts)} distinct tips")
-        self.assertNotIn("12", counts)
         # Banning `12` left this fixture with only two tips inside the coherence
         # gap, so a 30% ceiling is no longer reachable; the list must still not
         # collapse onto a single market.
         self.assertLessEqual(max(counts.values()) / len(picks), 0.50,
                              f"one tip took {max(counts.values())}/40")
 
-    def test_either_team_wins_is_never_published(self):
-        """`12` is the most likely market on most fixtures, so it won every pick.
+    def test_no_market_is_excluded(self):
+        """Every option competes, including "either team wins".
 
-        Nine Champions League rows all read "Either team wins" at the same
-        price. It is banned now, in both modes, at every stage of the fallback.
+        `12` used to flood the page because it is the most likely market on most
+        fixtures. It no longer can: among candidates above CERTAINTY_FLOOR the
+        best price wins, and `12` always has the shortest price.
         """
         from wakamaria.tips import TIPS
         probabilities = {tip: (0.95 if tip == "12" else 0.10) for tip in TIPS}
         prices = {tip: (2.0, "Model") for tip in TIPS}
         for mode in ("accuracy", "balanced"):
             choice = choose(probabilities.copy(), prices.copy(), mode=mode)
-            self.assertNotEqual(choice["tip"], "12", f"published 12 in {mode} mode")
+            self.assertEqual(choice["tip"], "12", f"12 must be eligible in {mode} mode")
+
+    def test_the_best_price_wins_among_certain_options(self):
+        """Rule 1: anything at 80% or better is a candidate; the best price wins.
+
+        Two near-certainties should never publish the cheaper of the two.
+        """
+        probabilities = {tip: 0.10 for tip in __import__("wakamaria.tips", fromlist=["TIPS"]).TIPS}
+        probabilities["Over 1.5"] = 0.99
+        probabilities["Over 2.5"] = 0.99
+        prices = {tip: (2.00, "Model") for tip in probabilities}
+        prices["Over 1.5"] = (1.05, "Model")
+        prices["Over 2.5"] = (1.60, "Model")
+        self.assertEqual(choose(probabilities, prices, mode="accuracy")["tip"], "Over 2.5")
+
+    def test_nothing_certain_falls_back_to_the_most_likely(self):
+        """Rule 2: with nothing above the floor, probability wins — the price
+        must play no part, however cheap the pick is."""
+        from wakamaria import calibration
+        from wakamaria.tips import TIPS
+        probabilities = {tip: 0.05 for tip in TIPS}
+        probabilities["Over 2.5"] = 0.62
+        probabilities["Over 1.5"] = 0.55
+        prices = {tip: (5.0, "Model") for tip in TIPS}
+        prices["Over 2.5"] = (1.30, "Model")
+        prices["Over 1.5"] = (9.00, "Model")   # deliberately the best price
+
+        real = calibration.calibrate_all(probabilities)
+        self.assertLess(max(real.values()), 0.80, "this case must stay below the floor")
+        expected = max(TIPS, key=lambda t: (real[t], prices[t][0]))
+        self.assertEqual(choose(probabilities, prices, mode="accuracy")["tip"],
+                         expected, "price must not override probability below the floor")
 
     def test_a_tip_must_be_close_to_the_best_market(self):
         """Regression: Real Madrid at home was published as "draw or away win".

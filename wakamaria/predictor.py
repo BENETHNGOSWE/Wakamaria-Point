@@ -20,12 +20,11 @@ from wakamaria.tips import TIPS, family
 
 MIN_CONFIDENCE_FLOOR = 0.30
 
-# "Either team wins" is the highest-probability market on most fixtures, so it
-# wins the pick automatically — nine rows out of ten said `12`, and a page of
-# "someone will win" predicts nothing. It is banned from selection. Banning
-# every double chance costs more accuracy and leaves only goal markets; banning
-# this one alone costs nothing (78.6% against 78.5%) and keeps the list varied.
-NEVER_PUBLISH = {"12"}
+# Every option above this is a candidate. Among those, the one with the best
+# price wins: if two outcomes are both near-certain, there is no reason to
+# publish the one that returns less. This is not a value bet — nothing below
+# the floor can ever be chosen, so a long price alone buys nothing.
+CERTAINTY_FLOOR = 0.80
 
 # A tip may not be more than this far below the fixture's single most likely
 # market. Variety is worth having; "Real Madrid to not win at home" is not a
@@ -82,8 +81,6 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
     def pick(lo, hi, cap):
         candidates = []
         for tip in TIPS:
-            if tip in NEVER_PUBLISH:
-                continue
             probability = probabilities.get(tip)
             if probability is None or not (lo <= probability <= hi):
                 continue
@@ -104,25 +101,33 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
                    key=lambda t: _rank_key(t, probabilities[t], prices, used_tips))
 
     if mode == "accuracy":
-        # The most likely market we can price, judged on the calibrated
-        # probability. Usage breaks exact ties only, so two identical fixtures
-        # do not produce two identical rows.
-        for lo, hi in ((floor, max_confidence), (floor, 1.0), (0.0, 1.0)):
-            best = None
-            for tip in TIPS:
-                if tip in NEVER_PUBLISH:
-                    continue
-                probability = real.get(tip)
-                if probability is None or not (lo <= probability <= hi):
-                    continue
-                if not priced(tip):
-                    continue
-                key = (probability, -used_tips.get(tip, 0))
-                if best is None or key > best[0]:
-                    best = (key, tip)
-            if best:
-                return _describe(best[1], probabilities, prices)
-        return None
+        # Rule 1: anything at CERTAINTY_FLOOR or better is a candidate, and the
+        # best price among those candidates is published. Among equals, the
+        # higher probability wins.
+        candidates = []
+        for tip in TIPS:
+            probability = real.get(tip)
+            if probability is None or probability < CERTAINTY_FLOOR:
+                continue
+            entry = priced(tip)
+            if not entry:
+                continue
+            candidates.append((tip, probability, entry[0]))
+        if candidates:
+            candidates.sort(key=lambda row: (row[2], row[1]), reverse=True)
+            return _describe(candidates[0][0], probabilities, prices)
+
+        # Rule 2: nothing is that certain, so the most likely market wins,
+        # however cheap it is. No price floor exists.
+        best = None
+        for tip in TIPS:
+            probability = real.get(tip)
+            if probability is None or not priced(tip):
+                continue
+            key = (probability, -used_tips.get(tip, 0))
+            if best is None or key > best[0]:
+                best = (key, tip)
+        return _describe(best[1], probabilities, prices) if best else None
 
     for lo, hi, cap in (
         (floor, max_confidence, family_cap),
@@ -133,7 +138,7 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
         if tip:
             return _describe(tip, probabilities, prices)
 
-    tip = max((t for t in TIPS if priced(t) and t not in NEVER_PUBLISH),
+    tip = max((t for t in TIPS if priced(t)),
               key=lambda t: (probabilities.get(t, 0.0), -used_tips.get(t, 0)),
               default=None)
     return _describe(tip, probabilities, prices) if tip else None

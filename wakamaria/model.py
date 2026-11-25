@@ -75,6 +75,8 @@ def probabilities(matrix):
                 out["Under 2.5"] += q
             if total < 4:
                 out["Under 3.5"] += q
+            if total < 5:
+                out["Under 4.5"] += q
             if h > 1:
                 out["Home Over 1.5"] += q
             if a > 1:

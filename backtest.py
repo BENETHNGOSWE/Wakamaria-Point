@@ -43,7 +43,7 @@ DEFAULT_LEAGUE_AVG = 2.65
 MARKETS = [
     "1", "X", "2", "1X", "X2", "12",
     "Over 1.5", "Over 2.5", "Over 3.5", "Over 4.5",
-    "Under 1.5", "Under 2.5", "Under 3.5",
+    "Under 1.5", "Under 2.5", "Under 3.5", "Under 4.5",
     "BTTS Yes", "BTTS No",
     "Home Over 1.5", "Away Over 1.5",
     "1 & BTTS Yes",
@@ -66,6 +66,7 @@ def outcome(market: str, hg: int, ag: int) -> bool:
         "Under 1.5": total < 2,
         "Under 2.5": total < 3,
         "Under 3.5": total < 4,
+        "Under 4.5": total < 5,
         "BTTS Yes": hg > 0 and ag > 0,
         "BTTS No": hg == 0 or ag == 0,
         "Home Over 1.5": hg > 1,
