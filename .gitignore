@@ -5,3 +5,6 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 .DS_Store
+
+# backtest input files (regenerate with the download script in BACKTEST.md)
+backtest_data/

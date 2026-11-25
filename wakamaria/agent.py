@@ -211,6 +211,22 @@ def _run(settings):
     return summary
 
 
+def enable_accuracy_band():
+    """Raise the confidence ceiling on an existing site.
+
+    Frappe never applies a new default to a Single record that already exists,
+    so a site installed before this change keeps its old 0.80 ceiling and the
+    agent keeps discarding its most likely predictions. Run once after deploy:
+
+        bench --site <site> execute wakamaria.agent.enable_accuracy_band
+    """
+    from wakamaria import agentconfig
+    value = agentconfig.DEFAULTS["max_confidence"]
+    frappe.db.set_single_value("Wakamaria Settings", "agent_max_confidence", value)
+    frappe.db.commit()
+    return f"agent_max_confidence set to {value}"
+
+
 def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
                      max_confidence, family_cap, used_families, used_tips,
                      strengths, margin):

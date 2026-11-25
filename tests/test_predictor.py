@@ -29,9 +29,17 @@ class TestChoose(unittest.TestCase):
         self.assertIn(choice["source"], ("Model", "Bookmaker"))
         self.assertEqual(choice["family"], family(choice["tip"]))
 
-    def test_confidence_matches_the_probability(self):
+    def test_confidence_is_the_calibrated_probability(self):
+        """The published number must be what happens, not what the model said.
+
+        The raw Poisson figure claimed 93% on picks that won 70% of the time.
+        The site now publishes the calibrated value for the same market.
+        """
+        from wakamaria.calibration import calibrate
         choice = choose(NEUTRAL, priced(NEUTRAL))
-        self.assertAlmostEqual(choice["confidence"], NEUTRAL[choice["tip"]], places=4)
+        self.assertAlmostEqual(choice["confidence"],
+                               round(calibrate(choice["tip"], NEUTRAL[choice["tip"]]), 4),
+                               places=4)
 
     def test_confidence_band_is_respected_when_possible(self):
         choice = choose(NEUTRAL, priced(NEUTRAL), min_confidence=0.55, max_confidence=0.75)

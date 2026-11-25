@@ -15,6 +15,7 @@ This module exists to prevent that. Three rules, in order:
 Pure: no Frappe, no network.
 """
 
+from wakamaria import calibration, model
 from wakamaria.tips import TIPS, family
 
 MIN_CONFIDENCE_FLOOR = 0.30
@@ -47,7 +48,7 @@ def _rank_key(tip, probability, prices, used_tips):
 
 
 def choose(probabilities, prices=None, *, min_confidence=0.35,
-           max_confidence=0.90, family_cap=3, used_families=None,
+           max_confidence=0.97, family_cap=3, used_families=None,
            used_tips=None, mode="accuracy"):
     """Return {"tip", "confidence", "odds", "source", "family"} or None.
 
@@ -59,6 +60,10 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
     """
     if not probabilities:
         return None
+    # The model's own probabilities are systematically overconfident on goals
+    # (see wakamaria/calibration.py). Rank and publish on the corrected ones,
+    # because the corrected ones are the only version that matches reality.
+    real = calibration.calibrate_all(probabilities)
     used_families = used_families or {}
     used_tips = used_tips or {}
     floor = max(min_confidence, MIN_CONFIDENCE_FLOOR)
@@ -90,12 +95,13 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
                    key=lambda t: _rank_key(t, probabilities[t], prices, used_tips))
 
     if mode == "accuracy":
-        # The most likely market we can price. Usage breaks exact ties only, so
-        # two identical fixtures do not produce two identical rows.
+        # The most likely market we can price, judged on the calibrated
+        # probability. Usage breaks exact ties only, so two identical fixtures
+        # do not produce two identical rows.
         for lo, hi in ((floor, max_confidence), (floor, 1.0), (0.0, 1.0)):
             best = None
             for tip in TIPS:
-                probability = probabilities.get(tip)
+                probability = real.get(tip)
                 if probability is None or not (lo <= probability <= hi):
                     continue
                 if not priced(tip):
@@ -124,9 +130,14 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
 
 def _describe(tip, probabilities, prices):
     price, source = prices[tip]
+    confidence = calibration.calibrate(tip, probabilities.get(tip, 0.0)) or 0.0
+    if source == "Model":
+        # Keep our own price consistent with the honest probability, so a 75%
+        # chance is never posted at the price of a 40% one.
+        price = model.market_odds(confidence) or price
     return {
         "tip": tip,
-        "confidence": round(probabilities.get(tip, 0.0), 4),
+        "confidence": round(confidence, 4),
         "odds": price,
         "source": source,
         "family": family(tip),

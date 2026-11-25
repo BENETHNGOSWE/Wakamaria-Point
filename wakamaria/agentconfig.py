@@ -17,7 +17,7 @@ DEFAULTS = {
     "max_per_run": 12,
     "max_per_day": 20,
     "min_confidence": 0.35,
-    "max_confidence": 0.80,
+    "max_confidence": 0.97,
     "family_cap": 3,
     "margin": model.DEFAULT_MARGIN,
     "pause_after_losses": 0,

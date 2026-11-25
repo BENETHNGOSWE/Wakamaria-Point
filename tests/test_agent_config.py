@@ -46,20 +46,22 @@ class TestResolve(unittest.TestCase):
         self.assertEqual(config["max_per_run"], DEFAULTS["max_per_run"])
         self.assertEqual(config["min_confidence"], DEFAULTS["min_confidence"])
 
-    def test_resolved_band_spans_a_useful_range_of_prices(self):
-        """Visitors combine picks themselves, so a wide spread matters.
+    def test_resolved_band_does_not_discard_the_most_likely_market(self):
+        """The ceiling used to be 0.80, which threw away 72% of predictions.
 
-        A narrow band collapsed the list onto three markets; the default now
-        reaches from ~1.18 up to ~2.70.
+        A backtest over 17,526 matches showed the discarded half hit *more*
+        often than the published half (72.0% against 71.7%). The ceiling now
+        sits high enough to include the calibrated probability the agent
+        normally produces; all three AI reviews asked for exactly this.
         """
-        from wakamaria.model import market_odds
+        from wakamaria import calibration
         config = resolve({})
-        shortest = market_odds(config["max_confidence"], config["margin"])
-        longest = market_odds(config["min_confidence"], config["margin"])
-        self.assertGreater(shortest, 1.10)
-        self.assertLess(shortest, 1.30)
-        self.assertGreater(longest, 2.50)
         self.assertGreater(config["max_confidence"], config["min_confidence"])
+        # the commonest published probability in practice (Over 1.5 on an
+        # average fixture) must fall inside the band
+        likely = calibration.calibrate("Over 1.5", 0.60)
+        self.assertGreater(likely, config["min_confidence"])
+        self.assertLess(likely, config["max_confidence"])
 
 
 if __name__ == "__main__":
