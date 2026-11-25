@@ -20,6 +20,13 @@ from wakamaria.tips import TIPS, family
 
 MIN_CONFIDENCE_FLOOR = 0.30
 
+# "Either team wins" is the highest-probability market on most fixtures, so it
+# wins the pick automatically — nine rows out of ten said `12`, and a page of
+# "someone will win" predicts nothing. It is banned from selection. Banning
+# every double chance costs more accuracy and leaves only goal markets; banning
+# this one alone costs nothing (78.6% against 78.5%) and keeps the list varied.
+NEVER_PUBLISH = {"12"}
+
 # A tip may not be more than this far below the fixture's single most likely
 # market. Variety is worth having; "Real Madrid to not win at home" is not a
 # matter of taste and must be impossible to publish.
@@ -75,6 +82,8 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
     def pick(lo, hi, cap):
         candidates = []
         for tip in TIPS:
+            if tip in NEVER_PUBLISH:
+                continue
             probability = probabilities.get(tip)
             if probability is None or not (lo <= probability <= hi):
                 continue
@@ -101,6 +110,8 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
         for lo, hi in ((floor, max_confidence), (floor, 1.0), (0.0, 1.0)):
             best = None
             for tip in TIPS:
+                if tip in NEVER_PUBLISH:
+                    continue
                 probability = real.get(tip)
                 if probability is None or not (lo <= probability <= hi):
                     continue
@@ -122,7 +133,7 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
         if tip:
             return _describe(tip, probabilities, prices)
 
-    tip = max((t for t in TIPS if priced(t)),
+    tip = max((t for t in TIPS if priced(t) and t not in NEVER_PUBLISH),
               key=lambda t: (probabilities.get(t, 0.0), -used_tips.get(t, 0)),
               default=None)
     return _describe(tip, probabilities, prices) if tip else None

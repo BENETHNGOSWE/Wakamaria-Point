@@ -36,8 +36,8 @@ from wakamaria.provider import api_get
 HISTORY_PREFIX = "wakamaria:history:"
 HISTORY_TTL = 6 * 3600
 HISTORY_LIMIT = 20
-HISTORY_FETCH_BUDGET = 8      # new provider calls per run, spread 7s apart
-PROVIDER_PAUSE = 7
+HISTORY_FETCH_BUDGET = 30     # new provider calls per run, spread 5s apart
+PROVIDER_PAUSE = 5
 
 
 def run_agent():

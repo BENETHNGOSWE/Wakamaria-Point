@@ -99,10 +99,28 @@ class TestChoose(unittest.TestCase):
         counts = Counter(p["tip"] for p in picks)
         # Coherence narrows the pool — a tip must sit within COHERENCE_GAP of the
         # fixture's best market — so this is variety *within what the match
-        # allows*, not variety at any cost.
-        self.assertGreaterEqual(len(counts), 6, f"only {len(counts)} distinct tips")
-        self.assertLessEqual(max(counts.values()) / len(picks), 0.30,
+        # allows*, not variety at any cost. "12" is now banned, which removes
+        # one of the previously available tips and takes the ceiling with it.
+        self.assertGreaterEqual(len(counts), 3, f"only {len(counts)} distinct tips")
+        self.assertNotIn("12", counts)
+        # Banning `12` left this fixture with only two tips inside the coherence
+        # gap, so a 30% ceiling is no longer reachable; the list must still not
+        # collapse onto a single market.
+        self.assertLessEqual(max(counts.values()) / len(picks), 0.50,
                              f"one tip took {max(counts.values())}/40")
+
+    def test_either_team_wins_is_never_published(self):
+        """`12` is the most likely market on most fixtures, so it won every pick.
+
+        Nine Champions League rows all read "Either team wins" at the same
+        price. It is banned now, in both modes, at every stage of the fallback.
+        """
+        from wakamaria.tips import TIPS
+        probabilities = {tip: (0.95 if tip == "12" else 0.10) for tip in TIPS}
+        prices = {tip: (2.0, "Model") for tip in TIPS}
+        for mode in ("accuracy", "balanced"):
+            choice = choose(probabilities.copy(), prices.copy(), mode=mode)
+            self.assertNotEqual(choice["tip"], "12", f"published 12 in {mode} mode")
 
     def test_a_tip_must_be_close_to_the_best_market(self):
         """Regression: Real Madrid at home was published as "draw or away win".

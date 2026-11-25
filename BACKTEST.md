@@ -84,6 +84,30 @@ Variety survived. Earlier concern that accuracy would force "Under 3.5 on
 every row" was wrong: once the goal bias is corrected, Over 1.5 is correctly
 recognised as the most likely market and takes its proper place.
 
+## Revision 2 — home advantage measured, not assumed
+
+Home advantage is no longer a 55/45 constant. It is measured for every fixture
+from the two teams' own home and away records (`model.league_split`), so the
+split moves with the match: 0.56 in one, 0.47 in another.
+
+The rating range widened (0.30–3.20) so a genuine mismatch is expressible. On
+the previous model the single strongest away win it could state was **50–60%**,
+which is why it could never say "Barcelona".
+
+| Scenario | Expected goals | Published |
+|---|---|---|
+| Sabah FK v Barcelona, both known | 0.73 / 2.29 | **X2 @ 1.17** (Barcelona or draw, 0.80) |
+| Same fixture, no data at all | 1.46 / 1.19 | Over 1.5 @ 1.23 |
+| Two evenly matched sides | 1.26 / 1.39 | Over 1.5 @ 1.23 |
+
+"Either team wins" (`12`) is now banned from selection. It is the most likely
+market on most fixtures, so it won every pick automatically; nine Champions
+League rows all read the same thing. Banning it costs nothing measurable
+(78.6% against 78.5%) and keeps the list varied.
+
+Whole history through the real `predictor.choose` path: **79.0%** (13,854 of
+17,538), market mix Over 1.5 56%, 1X 26%, Under 3.5 13%, X2 6%.
+
 ## What was shipped
 
 1. `wakamaria/calibration.py` — the fitted curves, 18 markets, 231 knots.
