@@ -113,10 +113,14 @@
     renderCalendar();
   }
 
-  // Ben Rule and Grace Rule ride on the same fixture. While the site is being
-  // tested both are shown on the same row: Ben in the main columns, Grace
-  // underneath it in small type, so they can be judged against the same match
-  // instead of being flipped between.
+  // Ben Rule and Grace Rule are two ways of reading the same fixtures. The
+  // Grace Rule view shows exactly the matches the Ben Rule view shows — same
+  // league, same date, same filters — but with Grace's prediction, price and
+  // result in the row. The two are never mixed on one row.
+  let selectedRule='ben';
+  const ruleOf = m => (selectedRule==='grace' && m.grace_prediction)
+    ? {prediction:m.grace_prediction, odds:m.grace_odds, source:'Model', outcome:m.grace_outcome}
+    : {prediction:m.prediction, odds:m.odds, source:m.odds_source, outcome:m.outcome};
   function ruleStats(){
     const tally={ben:{win:0,decided:0},grace:{win:0,decided:0}};
     for(const m of matches){
@@ -126,8 +130,8 @@
     }
     const pct=t=>t.decided?`${Math.round(100*t.win/t.decided)}% <small>(${t.win}/${t.decided})</small>`:'—';
     const out=document.getElementById('rule-stats');
-    if(out) out.innerHTML=`<span>Ben Rule <b>${pct(tally.ben)}</b></span>`
-      +`<span>Grace Rule <b>${pct(tally.grace)}</b></span>`;
+    if(out) out.innerHTML=`<span class="${selectedRule==='ben'?'on':''}">Ben Rule <b>${pct(tally.ben)}</b></span>`
+      +`<span class="${selectedRule==='grace'?'on':''}">Grace Rule <b>${pct(tally.grace)}</b></span>`;
     return tally;
   }
 
@@ -138,7 +142,8 @@
     updateDateTrigger();
     const filtered=statusMatches.filter(m=>(selectedDate==='All dates'||dayKey(m.kickoff)===selectedDate)&&(selectedLeague==='All leagues'||m.league===selectedLeague)&&(!q||`${m.home_team} ${m.away_team} ${m.league} ${m.prediction||''} ${m.grace_prediction||''}`.toLowerCase().includes(q)));
     ruleStats();
-    const html=leagues.map(l=>{const items=filtered.filter(m=>m.league===l.name);if(!items.length)return '';return `<section class="league-card"><div class="league-head"><div class="league-icon">${image(l)}</div><div><div class="league-title">${esc(l.league_name)}</div><div class="league-sub">${esc(l.country||'Football')} · Football</div></div><span class="league-num">${items.length} ${items.length===1?'match':'matches'}</span></div><div class="column-head"><span>Date & time</span><span>Match</span><span>Prediction</span><span>Odds</span><span>Score</span><span>Result</span></div>${items.map(m=>{let d=dateParts(m.kickoff);return `<div class="match-row"><div class="date"><strong>${esc(d.day)}</strong><br>${esc(d.time)}</div><div class="teams"><div class="team-line"><span class="team-badge">${esc((m.home_team || '?')[0])}</span>${esc(m.home_team)}</div><div class="team-line"><span class="team-badge">${esc((m.away_team || '?')[0])}</span>${esc(m.away_team)}</div></div><div class="prediction">${esc(m.prediction)}<small>${esc(tipText[m.prediction]||'')}</small>${m.grace_prediction?`<small class="grace-line">Grace: ${esc(m.grace_prediction)} @ ${esc(fmtOdds(m.grace_odds))}</small>`:''}</div><div class="odds"><b>${m.odds ? esc(fmtOdds(m.odds)) : '—'}</b><small>${m.odds ? (m.odds_source === 'Bookmaker' ? 'book' : 'est') : ''}</small></div><div class="score">${m.result_confirmed?`${esc(m.home_score)} : ${esc(m.away_score)}`:'— : —'}<small>${m.result_confirmed?'FULL TIME':esc(m.provider_status||'PENDING')}</small></div><div class="result">${badge(m)}<button class="details" data-id="${esc(m.name)}" aria-label="View ${esc(m.home_team)} versus ${esc(m.away_team)} details">›</button></div></div>`}).join('')}</section>`}).join('');
+    const shown=filtered.map(m=>{const r=ruleOf(m);return {...m,prediction:r.prediction,odds:r.odds,odds_source:r.source,outcome:r.outcome};});
+    const html=leagues.map(l=>{const items=shown.filter(m=>m.league===l.name);if(!items.length)return '';return `<section class="league-card"><div class="league-head"><div class="league-icon">${image(l)}</div><div><div class="league-title">${esc(l.league_name)}</div><div class="league-sub">${esc(l.country||'Football')} · Football</div></div><span class="league-num">${items.length} ${items.length===1?'match':'matches'}</span></div><div class="column-head"><span>Date & time</span><span>Match</span><span>Prediction</span><span>Odds</span><span>Score</span><span>Result</span></div>${items.map(m=>{let d=dateParts(m.kickoff);return `<div class="match-row"><div class="date"><strong>${esc(d.day)}</strong><br>${esc(d.time)}</div><div class="teams"><div class="team-line"><span class="team-badge">${esc((m.home_team || '?')[0])}</span>${esc(m.home_team)}</div><div class="team-line"><span class="team-badge">${esc((m.away_team || '?')[0])}</span>${esc(m.away_team)}</div></div><div class="prediction">${esc(m.prediction)}<small>${esc(tipText[m.prediction]||'')}</small></div><div class="odds"><b>${m.odds ? esc(fmtOdds(m.odds)) : '—'}</b><small>${m.odds ? (m.odds_source === 'Bookmaker' ? 'book' : 'est') : ''}</small></div><div class="score">${m.result_confirmed?`${esc(m.home_score)} : ${esc(m.away_score)}`:'— : —'}<small>${m.result_confirmed?'FULL TIME':esc(m.provider_status||'PENDING')}</small></div><div class="result">${badge(m)}<button class="details" data-id="${esc(m.name)}" aria-label="View ${esc(m.home_team)} versus ${esc(m.away_team)} details">›</button></div></div>`}).join('')}</section>`}).join('');
     document.getElementById('match-list').innerHTML=html||`<div class="empty">${
       selectedDate==='All dates'
         ? (selectedStatus==='finished'?'No confirmed results to show.':'No matching pending predictions to show.')
@@ -166,7 +171,7 @@
   }
   document.addEventListener('error',e=>{if(e.target.matches('[data-league-image]')&&e.target.src!==defaultImage)e.target.src=defaultImage},true);
   document.addEventListener('click',e=>{const dateTrigger=e.target.closest('#date-trigger');if(dateTrigger){toggleCalendar(document.getElementById('calendar').hidden);return}const calNav=e.target.closest('[data-cal-nav]');if(calNav){shiftMonth(Number(calNav.dataset.calNav));return}const calDay=e.target.closest('[data-cal-day]');if(calDay){selectedDate=calDay.dataset.calDay;toggleCalendar(false);render();return}const calClear=e.target.closest('[data-cal-clear]');if(calClear){selectedDate='All dates';toggleCalendar(false);render();return}if(!e.target.closest('.date-picker'))toggleCalendar(false);const league=e.target.closest('[data-league]');if(league){selectedLeague=league.dataset.league;render()}const tab=e.target.closest('[data-status]');if(tab)setStatus(tab.dataset.status);const detail=e.target.closest('[data-id]');if(detail)details(detail.dataset.id);if(e.target.id==='close'||e.target.id==='modal')document.getElementById('modal').classList.remove('open')});
-  document.getElementById('search').addEventListener('input',e=>{search=e.target.value;render()});document.getElementById('predictions-link').addEventListener('click',()=>setStatus('all'));document.getElementById('results-link').addEventListener('click',()=>setStatus('finished'));document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.getElementById('modal').classList.remove('open');toggleCalendar(false)}});
+  document.getElementById('search').addEventListener('input',e=>{search=e.target.value;render()});document.querySelectorAll('[data-rule]').forEach(b=>b.addEventListener('click',()=>{selectedRule=b.dataset.rule;document.querySelectorAll('[data-rule]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));render();}));document.getElementById('predictions-link').addEventListener('click',()=>setStatus('all'));document.getElementById('results-link').addEventListener('click',()=>setStatus('finished'));document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.getElementById('modal').classList.remove('open');toggleCalendar(false)}});
   let loaded=false, loading=false;
   async function refreshMatches() {
     if (loading) return;

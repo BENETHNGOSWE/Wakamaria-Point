@@ -29,17 +29,25 @@ class TestWebsiteBundle(unittest.TestCase):
             self.assertRegex(self.source, pattern,
                              f"{name} is used by the renderer but never defined")
 
-    def test_both_rules_are_visible_on_the_row(self):
-        """Testing the two rules means seeing them against the same match.
+    def test_grace_rule_has_its_own_view(self):
+        """The two rules must never share a row.
 
-        Ben Rule fills the main columns; Grace Rule must appear underneath on
-        the same row, not behind a toggle.
+        Grace Rule shows the same fixtures and the same filters as Ben Rule but
+        with Grace's prediction, price and result. The row swaps wholesale
+        rather than displaying both, which is what the page owner rejected.
         """
         self.assertIn("grace_prediction", self.source)
         self.assertIn("grace_odds", self.source)
-        self.assertIn("grace-line", self.source)
-        # and the strip that reports each rule's win rate
+        self.assertIn("grace_outcome", self.source)
+        self.assertIn("ruleOf", self.source)
         self.assertIn("ruleStats", self.source)
+        self.assertNotIn("grace-line", self.source, "the row must not mix both rules")
+
+    def test_the_rule_buttons_exist_in_the_page(self):
+        html = pathlib.Path(str(JS)).parents[3].joinpath(
+            "wakamaria", "www", "wakamaria.html").read_text(encoding="utf-8")
+        self.assertIn('data-rule="ben"', html)
+        self.assertIn('data-rule="grace"', html)
 
     def test_every_market_has_a_label(self):
         """A missing tipText entry renders an empty subtitle, not an error."""
