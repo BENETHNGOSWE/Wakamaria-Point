@@ -122,6 +122,23 @@ class TestChoose(unittest.TestCase):
             choice = choose(probabilities.copy(), prices.copy(), mode=mode)
             self.assertEqual(choice["tip"], "12", f"12 must be eligible in {mode} mode")
 
+    def test_ben_rule_takes_the_highest_probability_whatever_the_price(self):
+        """Ben Rule ignores price completely; Grace Rule only breaks ties with it."""
+        from wakamaria import calibration
+        from wakamaria.tips import TIPS
+        probabilities = {tip: 0.05 for tip in TIPS}
+        probabilities["Over 1.5"] = 0.80
+        probabilities["Over 2.5"] = 0.45
+
+        real = calibration.calibrate_all(probabilities)
+        expected = max(TIPS, key=lambda t: real[t])
+
+        cheap = {tip: (1.05, "Model") for tip in TIPS}
+        dear = {tip: (9.00, "Model") for tip in TIPS}
+        self.assertEqual(choose(probabilities, cheap, mode="ben")["tip"], expected)
+        self.assertEqual(choose(probabilities, dear, mode="ben")["tip"], expected,
+                         "changing every price must not change the Ben Rule pick")
+
     def test_the_best_price_wins_among_certain_options(self):
         """Rule 1: anything at 80% or better is a candidate; the best price wins.
 

@@ -14,7 +14,8 @@ import unittest
 
 JS = pathlib.Path(__file__).resolve().parents[1] / "wakamaria" / "public" / "js" / "website.js"
 
-HELPERS = ("esc", "image", "badge", "dateParts", "safeImage", "fmtOdds")
+HELPERS = ("esc", "image", "badge", "dateParts", "safeImage", "fmtOdds",
+           "ruleOf", "ruleStats")
 
 
 class TestWebsiteBundle(unittest.TestCase):
@@ -27,6 +28,14 @@ class TestWebsiteBundle(unittest.TestCase):
             pattern = rf"\bconst {name}\s*=|function {name}\s*\("
             self.assertRegex(self.source, pattern,
                              f"{name} is used by the renderer but never defined")
+
+    def test_the_two_rules_are_switchable(self):
+        """Ben Rule and Grace Rule share a row, so both field sets must exist."""
+        self.assertIn("grace_prediction", self.source)
+        self.assertIn("grace_odds", self.source)
+        self.assertIn("grace_outcome", self.source)
+        self.assertIn("data-rule", pathlib.Path(str(JS)).parents[3]
+                      .joinpath("wakamaria", "www", "wakamaria.html").read_text(encoding="utf-8"))
 
     def test_every_market_has_a_label(self):
         """A missing tipText entry renders an empty subtitle, not an error."""

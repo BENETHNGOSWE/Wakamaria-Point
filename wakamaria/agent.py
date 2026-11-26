@@ -272,15 +272,25 @@ def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
     if not choice or not choice.get("odds"):
         return None
 
+    # The same fixture, priced by the other rule, so the two can be compared on
+    # identical matches. Ben Rule is what the site publishes; Grace Rule rides
+    # along in shadow until it has earned the switch.
+    ben = choose(prediction["probabilities"], prices,
+                 min_confidence=min_confidence, max_confidence=max_confidence,
+                 used_tips=used_tips, mode="ben") or choice
+
     fields = {
         "league": league.name,
         "home_team": fixture["home_name"],
         "away_team": fixture["away_name"],
         "kickoff": fixture["kickoff"],
-        "prediction": choice["tip"],
-        "odds": choice["odds"],
-        "odds_source": choice["source"],
-        "confidence": choice["confidence"],
+        "prediction": ben["tip"],
+        "odds": ben["odds"],
+        "odds_source": ben["source"],
+        "confidence": ben["confidence"],
+        "grace_prediction": choice["tip"],
+        "grace_odds": choice["odds"],
+        "grace_confidence": choice["confidence"],
         "predicted_by": "Agent",
         "published": 1,
         "provider_match_id": fixture["id"],
@@ -288,9 +298,9 @@ def _publish_fixture(settings, league, fixture, budget, *, min_confidence,
         "provider_away_team_id": fixture["away_id"],
         "provider_status": fixture["status"],
         "notes": (f"Agent: lambda {prediction['home_lambda']:.2f}"
-                  f"/{prediction['away_lambda']:.2f}, "
-                  f"p={choice['confidence']:.3f}, price={choice['odds']}"
-                  f" ({choice['source']})"),
+                  f"/{prediction['away_lambda']:.2f}; "
+                  f"ben {ben['tip']} p={ben['confidence']:.3f} @ {ben['odds']}; "
+                  f"grace {choice['tip']} p={choice['confidence']:.3f} @ {choice['odds']}"),
     }
 
     if action == "adopt":

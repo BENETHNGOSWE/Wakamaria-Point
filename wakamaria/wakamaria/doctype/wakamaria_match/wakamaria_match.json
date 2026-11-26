@@ -1,252 +1,287 @@
 {
-  "doctype": "DocType",
-  "name": "Wakamaria Match",
-  "module": "Wakamaria",
-  "engine": "InnoDB",
-  "editable_grid": 1,
-  "field_order": [
-    "league",
-    "home_team",
-    "away_team",
-    "kickoff",
-    "prediction",
-    "odds",
-    "odds_source",
-    "confidence",
-    "predicted_by",
-    "published",
-    "provider_section",
-    "provider_match_id",
-    "provider_home_team_id",
-    "provider_away_team_id",
-    "provider_status",
-    "goal_section",
-    "goal_match_id",
-    "goal_home_team_id",
-    "goal_away_team_id",
-    "goal_last_status",
-    "goal_last_checked",
-    "goal_result_managed",
-    "result_section",
-    "result_confirmed",
-    "home_score",
-    "away_score",
-    "outcome",
-    "last_checked",
-    "notes"
-  ],
-  "fields": [
-    {
-      "fieldname": "league",
-      "label": "League",
-      "fieldtype": "Link",
-      "options": "Wakamaria League",
-      "reqd": 1,
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "home_team",
-      "label": "Home Team",
-      "fieldtype": "Data",
-      "reqd": 1,
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "away_team",
-      "label": "Away Team",
-      "fieldtype": "Data",
-      "reqd": 1,
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "kickoff",
-      "label": "Kickoff (site timezone)",
-      "fieldtype": "Datetime",
-      "reqd": 1,
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "prediction",
-      "label": "Prediction",
-      "fieldtype": "Select",
-      "options": "1\nX\n2\n1X\nX2\n12\nOver 1.5\nOver 2.5\nOver 3.5\nOver 4.5\nUnder 1.5\nUnder 2.5\nUnder 3.5\nUnder 4.5\nBTTS Yes\nBTTS No\nHome Over 1.5\nAway Over 1.5\n1 & BTTS Yes",
-      "reqd": 1,
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "odds",
-      "fieldtype": "Float",
-      "label": "Odds",
-      "precision": "2",
-      "in_list_view": 1,
-      "columns": 1,
-      "description": "Decimal price shown to visitors. Filled by the agent or typed by hand."
-    },
-    {
-      "fieldname": "odds_source",
-      "fieldtype": "Select",
-      "label": "Odds Source",
-      "options": "Model\nBookmaker\nManual",
-      "default": "Manual",
-      "in_list_view": 1,
-      "description": "Model = Wakamaria estimate. Bookmaker = a real quoted price."
-    },
-    {
-      "fieldname": "confidence",
-      "fieldtype": "Float",
-      "label": "Confidence",
-      "precision": "3",
-      "description": "Model probability for the published selection (0-1). Internal only."
-    },
-    {
-      "fieldname": "predicted_by",
-      "fieldtype": "Select",
-      "label": "Predicted By",
-      "options": "Manual\nOCR\nAgent",
-      "default": "Manual",
-      "in_list_view": 1,
-      "description": "Who created this prediction. The agent only touches rows it made."
-    },
-    {
-      "fieldname": "published",
-      "label": "Published",
-      "fieldtype": "Check",
-      "default": "0",
-      "description": "Only published predictions are visible on the public website."
-    },
-    {
-      "fieldname": "provider_section",
-      "label": "Provider Match",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "provider_match_id",
-      "label": "football-data.org Match ID",
-      "fieldtype": "Data",
-      "description": "Use Find fixture and confirm the correct fixture. Required for automatic result checking."
-    },
-    {
-      "fieldname": "provider_home_team_id",
-      "label": "Provider Home Team ID",
-      "fieldtype": "Data",
-      "read_only": 1
-    },
-    {
-      "fieldname": "provider_away_team_id",
-      "label": "Provider Away Team ID",
-      "fieldtype": "Data",
-      "read_only": 1
-    },
-    {
-      "fieldname": "provider_status",
-      "label": "Provider Status",
-      "fieldtype": "Data",
-      "read_only": 1
-    },
-    {
-      "fieldname": "result_section",
-      "label": "Final Result (90 minutes)",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "result_confirmed",
-      "label": "Result Confirmed",
-      "fieldtype": "Check",
-      "default": "0",
-      "description": "Set manually only for a verified full-time result, or let automatic sync set it."
-    },
-    {
-      "fieldname": "home_score",
-      "label": "Home Score",
-      "fieldtype": "Int",
-      "default": "0"
-    },
-    {
-      "fieldname": "away_score",
-      "label": "Away Score",
-      "fieldtype": "Int",
-      "default": "0"
-    },
-    {
-      "fieldname": "outcome",
-      "label": "Outcome",
-      "fieldtype": "Select",
-      "options": "Pending\nWin\nLose",
-      "read_only": 1,
-      "default": "Pending",
-      "in_list_view": 1
-    },
-    {
-      "fieldname": "last_checked",
-      "label": "Last Checked",
-      "fieldtype": "Datetime",
-      "read_only": 1
-    },
-    {
-      "fieldname": "notes",
-      "label": "Private Admin Notes",
-      "fieldtype": "Small Text"
-    },
-    {
-      "fieldname": "goal_section",
-      "label": "GOAL API Fixture",
-      "fieldtype": "Section Break"
-    },
-    {
-      "fieldname": "goal_match_id",
-      "label": "GOAL Fixture ID",
-      "fieldtype": "Data",
-      "read_only": 1
-    },
-    {
-      "fieldname": "goal_home_team_id",
-      "label": "GOAL Home Team ID",
-      "fieldtype": "Data",
-      "read_only": 1
-    },
-    {
-      "fieldname": "goal_away_team_id",
-      "label": "GOAL Away Team ID",
-      "fieldtype": "Data",
-      "read_only": 1
-    },
-    {
-      "fieldname": "goal_last_status",
-      "label": "GOAL Last Status",
-      "fieldtype": "Data",
-      "read_only": 1
-    },
-    {
-      "fieldname": "goal_last_checked",
-      "label": "GOAL Last Checked",
-      "fieldtype": "Datetime",
-      "read_only": 1
-    },
-    {
-      "fieldname": "goal_result_managed",
-      "label": "GOAL Managed Result",
-      "fieldtype": "Check",
-      "read_only": 1,
-      "default": "0",
-      "description": "Marks scores automatically confirmed by GOAL; manual edits take ownership."
-    }
-  ],
-  "permissions": [
-    {
-      "role": "System Manager",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "delete": 1,
-      "report": 1,
-      "export": 1,
-      "print": 1,
-      "import": 1
-    }
-  ],
-  "sort_field": "modified",
-  "sort_order": "DESC",
-  "autoname": "hash",
-  "title_field": "home_team",
-  "allow_import": 1
+ "doctype": "DocType",
+ "name": "Wakamaria Match",
+ "module": "Wakamaria",
+ "engine": "InnoDB",
+ "editable_grid": 1,
+ "field_order": [
+  "league",
+  "home_team",
+  "away_team",
+  "kickoff",
+  "prediction",
+  "odds",
+  "odds_source",
+  "confidence",
+  "predicted_by",
+  "published",
+  "provider_section",
+  "provider_match_id",
+  "provider_home_team_id",
+  "provider_away_team_id",
+  "provider_status",
+  "goal_section",
+  "goal_match_id",
+  "goal_home_team_id",
+  "goal_away_team_id",
+  "goal_last_status",
+  "goal_last_checked",
+  "goal_result_managed",
+  "result_section",
+  "result_confirmed",
+  "home_score",
+  "away_score",
+  "outcome",
+  "last_checked",
+  "grace_section",
+  "grace_prediction",
+  "grace_odds",
+  "grace_confidence",
+  "grace_outcome",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "league",
+   "label": "League",
+   "fieldtype": "Link",
+   "options": "Wakamaria League",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "home_team",
+   "label": "Home Team",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "away_team",
+   "label": "Away Team",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "kickoff",
+   "label": "Kickoff (site timezone)",
+   "fieldtype": "Datetime",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "prediction",
+   "label": "Prediction",
+   "fieldtype": "Select",
+   "options": "1\nX\n2\n1X\nX2\n12\nOver 1.5\nOver 2.5\nOver 3.5\nOver 4.5\nUnder 1.5\nUnder 2.5\nUnder 3.5\nUnder 4.5\nBTTS Yes\nBTTS No\nHome Over 1.5\nAway Over 1.5\n1 & BTTS Yes",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "odds",
+   "fieldtype": "Float",
+   "label": "Odds",
+   "precision": "2",
+   "in_list_view": 1,
+   "columns": 1,
+   "description": "Decimal price shown to visitors. Filled by the agent or typed by hand."
+  },
+  {
+   "fieldname": "odds_source",
+   "fieldtype": "Select",
+   "label": "Odds Source",
+   "options": "Model\nBookmaker\nManual",
+   "default": "Manual",
+   "in_list_view": 1,
+   "description": "Model = Wakamaria estimate. Bookmaker = a real quoted price."
+  },
+  {
+   "fieldname": "confidence",
+   "fieldtype": "Float",
+   "label": "Confidence",
+   "precision": "3",
+   "description": "Model probability for the published selection (0-1). Internal only."
+  },
+  {
+   "fieldname": "predicted_by",
+   "fieldtype": "Select",
+   "label": "Predicted By",
+   "options": "Manual\nOCR\nAgent",
+   "default": "Manual",
+   "in_list_view": 1,
+   "description": "Who created this prediction. The agent only touches rows it made."
+  },
+  {
+   "fieldname": "published",
+   "label": "Published",
+   "fieldtype": "Check",
+   "default": "0",
+   "description": "Only published predictions are visible on the public website."
+  },
+  {
+   "fieldname": "provider_section",
+   "label": "Provider Match",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "provider_match_id",
+   "label": "football-data.org Match ID",
+   "fieldtype": "Data",
+   "description": "Use Find fixture and confirm the correct fixture. Required for automatic result checking."
+  },
+  {
+   "fieldname": "provider_home_team_id",
+   "label": "Provider Home Team ID",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "provider_away_team_id",
+   "label": "Provider Away Team ID",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "provider_status",
+   "label": "Provider Status",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "result_section",
+   "label": "Final Result (90 minutes)",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "result_confirmed",
+   "label": "Result Confirmed",
+   "fieldtype": "Check",
+   "default": "0",
+   "description": "Set manually only for a verified full-time result, or let automatic sync set it."
+  },
+  {
+   "fieldname": "home_score",
+   "label": "Home Score",
+   "fieldtype": "Int",
+   "default": "0"
+  },
+  {
+   "fieldname": "away_score",
+   "label": "Away Score",
+   "fieldtype": "Int",
+   "default": "0"
+  },
+  {
+   "fieldname": "outcome",
+   "label": "Outcome",
+   "fieldtype": "Select",
+   "options": "Pending\nWin\nLose",
+   "read_only": 1,
+   "default": "Pending",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "last_checked",
+   "label": "Last Checked",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "notes",
+   "label": "Private Admin Notes",
+   "fieldtype": "Small Text"
+  },
+  {
+   "fieldname": "goal_section",
+   "label": "GOAL API Fixture",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "goal_match_id",
+   "label": "GOAL Fixture ID",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "goal_home_team_id",
+   "label": "GOAL Home Team ID",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "goal_away_team_id",
+   "label": "GOAL Away Team ID",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "goal_last_status",
+   "label": "GOAL Last Status",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "goal_last_checked",
+   "label": "GOAL Last Checked",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "goal_result_managed",
+   "label": "GOAL Managed Result",
+   "fieldtype": "Check",
+   "read_only": 1,
+   "default": "0",
+   "description": "Marks scores automatically confirmed by GOAL; manual edits take ownership."
+  },
+  {
+   "fieldname": "grace_section",
+   "fieldtype": "Section Break",
+   "label": "Grace Rule"
+  },
+  {
+   "fieldname": "grace_prediction",
+   "fieldtype": "Select",
+   "label": "Grace Prediction",
+   "options": "1\nX\n2\n1X\nX2\n12\nOver 1.5\nOver 2.5\nOver 3.5\nOver 4.5\nUnder 1.5\nUnder 2.5\nUnder 3.5\nUnder 4.5\nBTTS Yes\nBTTS No\nHome Over 1.5\nAway Over 1.5\n1 & BTTS Yes"
+  },
+  {
+   "fieldname": "grace_odds",
+   "fieldtype": "Float",
+   "label": "Grace Odds",
+   "precision": "2"
+  },
+  {
+   "fieldname": "grace_confidence",
+   "fieldtype": "Float",
+   "label": "Grace Confidence"
+  },
+  {
+   "fieldname": "grace_outcome",
+   "fieldtype": "Select",
+   "label": "Grace Outcome",
+   "default": "Pending",
+   "options": "Pending\nWin\nLose",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "import": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "autoname": "hash",
+ "title_field": "home_team",
+ "allow_import": 1
 }

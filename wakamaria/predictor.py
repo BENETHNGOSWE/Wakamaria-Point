@@ -58,6 +58,11 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
            used_tips=None, mode="accuracy"):
     """Return {"tip", "confidence", "odds", "source", "family"} or None.
 
+    `mode` selects the rule:
+      "accuracy" / "grace" — Grace Rule: 80% floor, best price among candidates
+      "ben"                — Ben Rule: highest probability, price ignored
+      "balanced"           — legacy rotation, used for variety tests
+
     Degrades in stages rather than ever returning nothing:
       1. inside the band, inside the family cap
       2. inside the band, family cap lifted
@@ -99,6 +104,20 @@ def choose(probabilities, prices=None, *, min_confidence=0.35,
         candidates = [(t, p) for t, p in candidates if p >= top - COHERENCE_GAP]
         return max((t for t, _ in candidates),
                    key=lambda t: _rank_key(t, probabilities[t], prices, used_tips))
+
+    if mode == "ben":
+        # The Ben Rule, kept alive so the two can be compared side by side.
+        # Highest probability wins; price is never consulted. This is what the
+        # site published before Grace Rule existed.
+        best = None
+        for tip in TIPS:
+            probability = real.get(tip)
+            if probability is None or not priced(tip):
+                continue
+            key = (probability, -used_tips.get(tip, 0))
+            if best is None or key > best[0]:
+                best = (key, tip)
+        return _describe(best[1], probabilities, prices) if best else None
 
     if mode == "accuracy":
         # Rule 1: anything at CERTAINTY_FLOOR or better is a candidate, and the

@@ -31,6 +31,27 @@ The name for every selection rule agreed on 2026-11-08. When the user says
 | "12 — either team wins" on every row | Rule 1 makes it lose to any better-priced candidate |
 | `Under 4.5` missing from the goal lines | Added. 19 markets now |
 
+## Ben Rule vs Grace Rule, side by side
+
+Both rules run on **every fixture**. The row stores both picks, so they settle
+from the same score and can be compared on identical matches.
+
+| | Ben Rule | Grace Rule |
+|---|---|---|
+| Rule | highest probability, price ignored | 80% floor, best price among candidates |
+| Published on the site | **yes** (the list you trust) | shadow |
+| Hit rate, 17,538 matches | **86.4%** | 84.7% |
+| Hit rate, held out | 86.7% | 84.8% |
+| Average price | 1.092 | 1.112 |
+| Mix | Under 4.5 81%, 1X 11%, Over 1.5 6% | Under 4.5 65%, Over 1.5 17%, 1X 9%, 12 4%, X2 4% |
+
+**The measured trade: Grace Rule wins 1.7 points less often and pays 0.02 more
+per bet.** Ben Rule is the more accurate of the two; Grace Rule is the better
+priced. Both are far above the 70% target.
+
+On the site: tabs `Ben Rule` / `Grace Rule` in the toolbar, and a strip above
+them showing each rule's live win rate.
+
 ## Verified numbers
 
 | Test | Result |

@@ -27,3 +27,7 @@ class WakamariaMatch(Document):
         if self.provider_match_id and frappe.db.exists("Wakamaria Match", {"provider_match_id": self.provider_match_id, "name": ["!=", self.name or ""]}):
             frappe.throw(_("This provider fixture is already linked to another Wakamaria Match."))
         self.outcome = evaluate(self.prediction, self.home_score, self.away_score) if self.result_confirmed else "Pending"
+        # Both rules ride the same fixture, so they settle from the same score.
+        grace_tip = getattr(self, "grace_prediction", None)
+        self.grace_outcome = (evaluate(grace_tip, self.home_score, self.away_score)
+                              if self.result_confirmed and grace_tip else "Pending")
